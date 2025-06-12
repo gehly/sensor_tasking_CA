@@ -108,32 +108,77 @@ def get_state_and_covar(df):
     r_RTN = np.reshape(r_RTN, (3,1))
     v_RTN = np.reshape(v_RTN, (3,1))
     
-    P1_RTN = np.zeros((6,6))
-    P1_RTN[0,0] = std1[0]**2.  # r
-    P1_RTN[1,1] = std1[1]**2.  # t
-    P1_RTN[2,2] = std1[2]**2.  # n
-    P1_RTN[3,3] = std1[3]**2.  # rdot
-    P1_RTN[4,4] = std1[4]**2.  # tdot
-    P1_RTN[5,5] = std1[5]**2.  # ndot
+    # P1_RTN = np.zeros((6,6))
+    # P1_RTN[0,0] = std1[0]**2.  # r
+    # P1_RTN[1,1] = std1[1]**2.  # t
+    # P1_RTN[2,2] = std1[2]**2.  # n
+    # P1_RTN[3,3] = std1[3]**2.  # rdot
+    # P1_RTN[4,4] = std1[4]**2.  # tdot
+    # P1_RTN[5,5] = std1[5]**2.  # ndot
     
-    P1_RTN[0,1] = P1_RTN[1,0] = corr1[0]*std1[0]*std1[1]
-    P1_RTN[0,2] = P1_RTN[2,0] = corr1[1]*std1[0]*std1[2]
-    P1_RTN[1,2] = P1_RTN[2,1] = corr1[2]*std1[1]*std1[2]
-    P1_RTN[0,3] = P1_RTN[3,0] = corr1[3]*std1[0]*std1[3]
-    P1_RTN[1,3] = P1_RTN[3,1] = corr1[4]*std1[1]*std1[3]
-    P1_RTN[2,3] = P1_RTN[3,2] = corr1[5]*std1[2]*std1[3]
-    P1_RTN[0,4] = P1_RTN[4,0] = corr1[6]*std1[0]*std1[4]
-    P1_RTN[1,4] = P1_RTN[4,1] = corr1[7]*std1[1]*std1[4]
-    P1_RTN[2,4] = P1_RTN[4,2] = corr1[8]*std1[2]*std1[4]
-    P1_RTN[3,4] = P1_RTN[4,3] = corr1[9]*std1[3]*std1[4]
-    P1_RTN[0,5] = P1_RTN[5,0] = corr1[10]*std1[0]*std1[5]
-    P1_RTN[1,5] = P1_RTN[5,1] = corr1[11]*std1[1]*std1[5]
-    P1_RTN[2,5] = P1_RTN[5,2] = corr1[12]*std1[2]*std1[5]
-    P1_RTN[3,5] = P1_RTN[5,3] = corr1[13]*std1[3]*std1[5]
-    P1_RTN[4,5] = P1_RTN[5,4] = corr1[14]*std1[4]*std1[5]
+    # P1_RTN[0,1] = P1_RTN[1,0] = corr1[0]*std1[0]*std1[1]
+    # P1_RTN[0,2] = P1_RTN[2,0] = corr1[1]*std1[0]*std1[2]
+    # P1_RTN[1,2] = P1_RTN[2,1] = corr1[2]*std1[1]*std1[2]
+    # P1_RTN[0,3] = P1_RTN[3,0] = corr1[3]*std1[0]*std1[3]
+    # P1_RTN[1,3] = P1_RTN[3,1] = corr1[4]*std1[1]*std1[3]
+    # P1_RTN[2,3] = P1_RTN[3,2] = corr1[5]*std1[2]*std1[3]
+    # P1_RTN[0,4] = P1_RTN[4,0] = corr1[6]*std1[0]*std1[4]
+    # P1_RTN[1,4] = P1_RTN[4,1] = corr1[7]*std1[1]*std1[4]
+    # P1_RTN[2,4] = P1_RTN[4,2] = corr1[8]*std1[2]*std1[4]
+    # P1_RTN[3,4] = P1_RTN[4,3] = corr1[9]*std1[3]*std1[4]
+    # P1_RTN[0,5] = P1_RTN[5,0] = corr1[10]*std1[0]*std1[5]
+    # P1_RTN[1,5] = P1_RTN[5,1] = corr1[11]*std1[1]*std1[5]
+    # P1_RTN[2,5] = P1_RTN[5,2] = corr1[12]*std1[2]*std1[5]
+    # P1_RTN[3,5] = P1_RTN[5,3] = corr1[13]*std1[3]*std1[5]
+    # P1_RTN[4,5] = P1_RTN[5,4] = corr1[14]*std1[4]*std1[5]
+    
+    
+    P1_RTN = compute_covar_matrix(std1, corr1)
+    P2_RTN = compute_covar_matrix(std2, corr2)
+    
+    
+    print(P1_RTN)
+    print(P1_RTN - P1_RTN.T)
+    print(np.linalg.det(P1_RTN[0:3,0:3]))
+    
+    print(P2_RTN)
+    print(P2_RTN - P2_RTN.T)
+    print(np.linalg.det(P2_RTN[0:3,0:3]))
+    
+    mistake
     
     
     return r_RTN, v_RTN, P1_RTN, P2_RTN
+
+
+def compute_covar_matrix(std, corr):
+    
+    P = np.zeros((6,6))
+    P[0,0] = std[0]**2.  # r
+    P[1,1] = std[1]**2.  # t
+    P[2,2] = std[2]**2.  # n
+    P[3,3] = std[3]**2.  # rdot
+    P[4,4] = std[4]**2.  # tdot
+    P[5,5] = std[5]**2.  # ndot
+    
+    P[0,1] = P[1,0] = corr[0]*std[0]*std[1]
+    P[0,2] = P[2,0] = corr[1]*std[0]*std[2]
+    P[1,2] = P[2,1] = corr[2]*std[1]*std[2]
+    P[0,3] = P[3,0] = corr[3]*std[0]*std[3]
+    P[1,3] = P[3,1] = corr[4]*std[1]*std[3]
+    P[2,3] = P[3,2] = corr[5]*std[2]*std[3]
+    P[0,4] = P[4,0] = corr[6]*std[0]*std[4]
+    P[1,4] = P[4,1] = corr[7]*std[1]*std[4]
+    P[2,4] = P[4,2] = corr[8]*std[2]*std[4]
+    P[3,4] = P[4,3] = corr[9]*std[3]*std[4]
+    P[0,5] = P[5,0] = corr[10]*std[0]*std[5]
+    P[1,5] = P[5,1] = corr[11]*std[1]*std[5]
+    P[2,5] = P[5,2] = corr[12]*std[2]*std[5]
+    P[3,5] = P[5,3] = corr[13]*std[3]*std[5]
+    P[4,5] = P[5,4] = corr[14]*std[4]*std[5]
+    
+    
+    return P
 
 
 def kelvins_data_stats(kelvins_df):
