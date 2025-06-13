@@ -62,21 +62,56 @@ def kelvins_df_to_dict(kelvins_df):
             kelvins_dict[event_id] = {}
             kelvins_dict[event_id]['time_to_tca'] = []
             kelvins_dict[event_id]['risk'] = []
+            kelvins_dict[event_id]['max_risk_estimate'] = []
+            kelvins_dict[event_id]['max_risk_scaling'] = []
+            kelvins_dict[event_id]['miss_distance'] = []
+            kelvins_dict[event_id]['relative_speed'] = []
+            kelvins_dict[event_id]['r_RTN'] = []
+            kelvins_dict[event_id]['v_RTN'] = []
+            kelvins_dict[event_id]['P1_RTN'] = []
+            kelvins_dict[event_id]['P2_RTN'] = []
+            kelvins_dict[event_id]['t_j2k_sma'] = []
+            kelvins_dict[event_id]['t_j2k_ecc'] = []
+            kelvins_dict[event_id]['t_j2k_inc'] = []
+            kelvins_dict[event_id]['c_j2k_sma'] = []
+            kelvins_dict[event_id]['c_j2k_ecc'] = []
+            kelvins_dict[event_id]['c_j2k_inc'] = []
+            kelvins_dict[event_id]['mahalanobis_distance'] = []
+            kelvins_dict[event_id]['t_position_covariance_det'] = []
+            kelvins_dict[event_id]['c_position_covariance_det'] = []            
             
             
         # Retrieve state and covariance data
         reduced_df = kelvins_df[ii:ii+1]
         r_RTN, v_RTN, P1_RTN, P2_RTN = get_state_and_covar(reduced_df)
         
-        mistake
-        
         # Append data to lists
         kelvins_dict[event_id]['time_to_tca'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('time_to_tca')])
         kelvins_dict[event_id]['risk'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('risk')])
+        kelvins_dict[event_id]['max_risk_estimate'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('max_risk_estimate')])
+        kelvins_dict[event_id]['max_risk_scaling'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('max_risk_scaling')])
+        kelvins_dict[event_id]['miss_distance'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('miss_distance')])
+        kelvins_dict[event_id]['relative_speed'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('relative_speed')])
+        kelvins_dict[event_id]['t_j2k_sma'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('t_j2k_sma')])
+        kelvins_dict[event_id]['t_j2k_ecc'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('t_j2k_ecc')])
+        kelvins_dict[event_id]['t_j2k_inc'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('t_j2k_inc')])
+        kelvins_dict[event_id]['c_j2k_sma'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('c_j2k_sma')])
+        kelvins_dict[event_id]['c_j2k_ecc'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('c_j2k_ecc')])
+        kelvins_dict[event_id]['c_j2k_inc'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('c_j2k_inc')])
+        kelvins_dict[event_id]['mahalanobis_distance'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('mahalanobis_distance')])
+        kelvins_dict[event_id]['t_position_covariance_det'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('t_position_covariance_det')])
+        kelvins_dict[event_id]['c_position_covariance_det'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('c_position_covariance_det')])
+
+        kelvins_dict[event_id]['r_RTN'].append(r_RTN)
+        kelvins_dict[event_id]['v_RTN'].append(v_RTN)
+        kelvins_dict[event_id]['P1_RTN'].append(P1_RTN)
+        kelvins_dict[event_id]['P2_RTN'].append(P2_RTN)
+        
         
     
     print(len(kelvins_dict))
     print(kelvins_dict[0])
+
     
     return kelvins_dict
 
@@ -107,45 +142,20 @@ def get_state_and_covar(df):
     
     r_RTN = np.reshape(r_RTN, (3,1))
     v_RTN = np.reshape(v_RTN, (3,1))
-    
-    # P1_RTN = np.zeros((6,6))
-    # P1_RTN[0,0] = std1[0]**2.  # r
-    # P1_RTN[1,1] = std1[1]**2.  # t
-    # P1_RTN[2,2] = std1[2]**2.  # n
-    # P1_RTN[3,3] = std1[3]**2.  # rdot
-    # P1_RTN[4,4] = std1[4]**2.  # tdot
-    # P1_RTN[5,5] = std1[5]**2.  # ndot
-    
-    # P1_RTN[0,1] = P1_RTN[1,0] = corr1[0]*std1[0]*std1[1]
-    # P1_RTN[0,2] = P1_RTN[2,0] = corr1[1]*std1[0]*std1[2]
-    # P1_RTN[1,2] = P1_RTN[2,1] = corr1[2]*std1[1]*std1[2]
-    # P1_RTN[0,3] = P1_RTN[3,0] = corr1[3]*std1[0]*std1[3]
-    # P1_RTN[1,3] = P1_RTN[3,1] = corr1[4]*std1[1]*std1[3]
-    # P1_RTN[2,3] = P1_RTN[3,2] = corr1[5]*std1[2]*std1[3]
-    # P1_RTN[0,4] = P1_RTN[4,0] = corr1[6]*std1[0]*std1[4]
-    # P1_RTN[1,4] = P1_RTN[4,1] = corr1[7]*std1[1]*std1[4]
-    # P1_RTN[2,4] = P1_RTN[4,2] = corr1[8]*std1[2]*std1[4]
-    # P1_RTN[3,4] = P1_RTN[4,3] = corr1[9]*std1[3]*std1[4]
-    # P1_RTN[0,5] = P1_RTN[5,0] = corr1[10]*std1[0]*std1[5]
-    # P1_RTN[1,5] = P1_RTN[5,1] = corr1[11]*std1[1]*std1[5]
-    # P1_RTN[2,5] = P1_RTN[5,2] = corr1[12]*std1[2]*std1[5]
-    # P1_RTN[3,5] = P1_RTN[5,3] = corr1[13]*std1[3]*std1[5]
-    # P1_RTN[4,5] = P1_RTN[5,4] = corr1[14]*std1[4]*std1[5]
-    
-    
+   
     P1_RTN = compute_covar_matrix(std1, corr1)
     P2_RTN = compute_covar_matrix(std2, corr2)
     
     
-    print(P1_RTN)
-    print(P1_RTN - P1_RTN.T)
-    print(np.linalg.det(P1_RTN[0:3,0:3]))
+    # print(P1_RTN)
+    # print(P1_RTN - P1_RTN.T)
+    # print(np.linalg.det(P1_RTN[0:3,0:3]))
     
-    print(P2_RTN)
-    print(P2_RTN - P2_RTN.T)
-    print(np.linalg.det(P2_RTN[0:3,0:3]))
+    # print(P2_RTN)
+    # print(P2_RTN - P2_RTN.T)
+    # print(np.linalg.det(P2_RTN[0:3,0:3]))
     
-    mistake
+    # mistake
     
     
     return r_RTN, v_RTN, P1_RTN, P2_RTN
