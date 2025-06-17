@@ -20,6 +20,7 @@ import pandas as pd
 import os
 
 
+import ConjunctionUtilities as ConjUtil
 
 ###############################################################################
 # Basic I/O
@@ -47,6 +48,12 @@ def read_kelvins_data(csv_file):
     kelvins_df = pd.read_csv(csv_file)
     
     return kelvins_df
+
+
+def clean_kelvins_data(original_df):
+    
+    
+    return reduced_df
 
 
 def kelvins_df_to_dict(kelvins_df):
@@ -191,6 +198,7 @@ def compute_covar_matrix(std, corr):
     return P
 
 
+
 def kelvins_data_stats(kelvins_df):
     '''
     
@@ -211,10 +219,7 @@ def kelvins_data_stats(kelvins_df):
     return
 
 
-def clean_kelvins_data(original_df):
-    
-    
-    return reduced_df
+
 
 
 ###############################################################################
@@ -228,6 +233,54 @@ def clean_kelvins_data(original_df):
 ###############################################################################
 # Unit Test
 ###############################################################################
+
+
+def verify_kelvins_dict(kelvins_dict):
+    
+    event_id_list = sorted(list(kelvins_dict.keys()))
+    
+    # Loop over events and CDMs, retrieve data and recompute determinants and
+    # collision risk metrics
+    for event_id in event_id_list:
+        
+        num_cdm = len(kelvins_dict[event_id]['time_to_tca'])
+        for ii in range(num_cdm):
+            
+            risk = kelvins_dict[event_id]['risk'][ii]
+            miss_distance = kelvins_dict[event_id]['miss_distance'][ii]
+            relative_speed = kelvins_dict[event_id]['relative_speed'][ii]
+            mahalanobis_distance = kelvins_dict[event_id]['mahalanobis_distance'][ii]
+            t_position_covariance_det = kelvins_dict[event_id]['t_position_covariance_det'][ii]
+            c_position_covariance_det = kelvins_dict[event_id]['c_position_covariance_det'][ii]
+            
+            r_RTN = kelvins_dict[event_id]['r_RTN'][ii]
+            v_RTN = kelvins_dict[event_id]['v_RTN'][ii]
+            P1_RTN = kelvins_dict[event_id]['P1_RTN'][ii]
+            P2_RTN = kelvins_dict[event_id]['P2_RTN'][ii]
+            
+            
+            
+            # Recompute metrics to check
+            check_miss_distance = np.linalg.norm(r_RTN) - miss_distance
+            check_relative_speed = np.linalg.norm(v_RTN) - relative_speed
+            dM = ConjUtil.compute_mahalanobis_distance(r_RTN, np.zeros((3,1)), P1_RTN[0:3,0:3], P2_RTN[0:3,0:3])
+            check_mahalanobis_distance = dM - mahalanobis_distance
+            check_t_poscov_det = np.linalg.det(P1_RTN[0:3,0:3]) - t_position_covariance_det
+            check_c_poscov_det = np.linalg.det(P2_RTN[0:3,0:3]) - c_position_covariance_det
+            
+            print(check_miss_distance)
+            print(check_relative_speed)
+            print(check_mahalanobis_distance)
+            print(dM, mahalanobis_distance)
+            print(check_t_poscov_det)
+            print(check_c_poscov_det)
+            
+            mistake
+            
+    
+    
+    return
+
 
 def check_kelvins_Pc():
     
@@ -246,4 +299,6 @@ if __name__ == '__main__':
     
     kelvins_df = read_kelvins_data(kelvins_data)    
     
-    kelvins_df_to_dict(kelvins_df)
+    kelvins_dict = kelvins_df_to_dict(kelvins_df)
+    
+    verify_kelvins_dict(kelvins_dict)

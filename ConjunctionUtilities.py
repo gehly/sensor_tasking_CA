@@ -322,6 +322,30 @@ def read_cdm_state_covar(lines):
 
 
 ###############################################################################
+# Basic Risk Metrics
+###############################################################################
+
+
+def compute_euclidean_distance(r_A, r_B):
+    
+    d = np.linalg.norm(r_A - r_B)
+    
+    return d
+
+
+def compute_mahalanobis_distance(r_A, r_B, P_A, P_B):    
+    
+    r_A = np.reshape(r_A, (3,1))
+    r_B = np.reshape(r_B, (3,1))
+    Psum = P_A + P_B
+    invP = np.linalg.inv(Psum)
+    diff = r_A - r_B
+    M = float(np.sqrt(np.dot(diff.T, np.dot(invP, diff)))[0,0])
+    
+    return M
+
+
+###############################################################################
 # 2D Probability of Collision (Pc) Functions
 ###############################################################################
 
