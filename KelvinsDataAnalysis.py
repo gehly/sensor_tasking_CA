@@ -85,7 +85,9 @@ def kelvins_df_to_dict(kelvins_df):
             kelvins_dict[event_id]['c_j2k_inc'] = []
             kelvins_dict[event_id]['mahalanobis_distance'] = []
             kelvins_dict[event_id]['t_position_covariance_det'] = []
-            kelvins_dict[event_id]['c_position_covariance_det'] = []            
+            kelvins_dict[event_id]['c_position_covariance_det'] = []       
+            kelvins_dict[event_id]['t_span'] = []
+            kelvins_dict[event_id]['c_span'] = []
             
             
         # Retrieve state and covariance data
@@ -108,6 +110,9 @@ def kelvins_df_to_dict(kelvins_df):
         kelvins_dict[event_id]['mahalanobis_distance'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('mahalanobis_distance')])
         kelvins_dict[event_id]['t_position_covariance_det'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('t_position_covariance_det')])
         kelvins_dict[event_id]['c_position_covariance_det'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('c_position_covariance_det')])
+        kelvins_dict[event_id]['t_span'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('t_span')])
+        kelvins_dict[event_id]['c_span'].append(kelvins_df.iloc[ii, kelvins_df.columns.get_loc('c_span')])
+
 
         kelvins_dict[event_id]['r_RTN'].append(r_RTN)
         kelvins_dict[event_id]['v_RTN'].append(v_RTN)
@@ -252,6 +257,8 @@ def verify_kelvins_dict(kelvins_dict):
             mahalanobis_distance = kelvins_dict[event_id]['mahalanobis_distance'][ii]
             t_position_covariance_det = kelvins_dict[event_id]['t_position_covariance_det'][ii]
             c_position_covariance_det = kelvins_dict[event_id]['c_position_covariance_det'][ii]
+            t_span = kelvins_dict[event_id]['t_span'][ii]
+            c_span = kelvins_dict[event_id]['c_span'][ii]
             
             r_RTN = kelvins_dict[event_id]['r_RTN'][ii]
             v_RTN = kelvins_dict[event_id]['v_RTN'][ii]
@@ -268,12 +275,20 @@ def verify_kelvins_dict(kelvins_dict):
             check_t_poscov_det = np.linalg.det(P1_RTN[0:3,0:3]) - t_position_covariance_det
             check_c_poscov_det = np.linalg.det(P2_RTN[0:3,0:3]) - c_position_covariance_det
             
+            # Compute 2D Pc
+            HBR = t_span + c_span
+            X1 = np.concatenate((r_RTN, v_RTN), axis=0)
+            X2 = np.zeros((6,1))
+            Pc = ConjUtil.Pc2D_Foster(X1, P1_RTN, X2, P2_RTN, HBR)
+            
             print(check_miss_distance)
             print(check_relative_speed)
             print(check_mahalanobis_distance)
             print(dM, mahalanobis_distance)
             print(check_t_poscov_det)
             print(check_c_poscov_det)
+            print(Pc)
+            print(np.log10(Pc), risk)
             
             mistake
             
