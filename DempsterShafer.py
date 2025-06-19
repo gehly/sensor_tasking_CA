@@ -12,7 +12,7 @@
 import numpy as np
 import math
 from scipy.integrate import dblquad
-
+import matplotlib.pyplot as plt
 
 def compute_Pc(uvec, HBR):
     '''
@@ -71,6 +71,54 @@ def compute_Pc(uvec, HBR):
     return Pc
 
 
+def unit_test_dilution():
+    '''
+    This function tests Pc calculation by comparison to Sanchez Fig 3.1 [1].
+    
+    '''
+    
+    # Fixed params
+    HBR = 5.
+    z = 6.
+    var_z = 9.
+    covar_xz = 0.
+    
+    x_list = [0., 2., 5., 20., 50.]
+    sig_x_list = list(np.logspace(-1, 3, 50))
+    
+    plot_Pc = np.zeros((len(x_list), len(sig_x_list)))
+    for x in x_list:
+        
+        ii = x_list.index(x)        
+        for sig_x in sig_x_list:
+            
+            jj = sig_x_list.index(sig_x)
+            var_x = sig_x**2.
+            uvec = np.array([x, z, var_x, var_z, covar_xz])
+            Pc = compute_Pc(uvec, HBR)
+            
+            plot_Pc[ii,jj] = Pc
+    
+    
+    plt.figure()
+    plt.loglog(sig_x_list, plot_Pc[0,:], 'k--', label='x = ' + str(x_list[0]))
+    plt.loglog(sig_x_list, plot_Pc[1,:], 'b--', label='x = ' + str(x_list[1]))
+    plt.loglog(sig_x_list, plot_Pc[2,:], 'g--', label='x = ' + str(x_list[2]))
+    plt.loglog(sig_x_list, plot_Pc[3,:], 'r--', label='x = ' + str(x_list[3]))
+    plt.loglog(sig_x_list, plot_Pc[4,:], 'm--', label='x = ' + str(x_list[4]))
+    plt.ylim([1e-4, 1.0])
+    plt.xlim([1e-1, 1e3])
+    plt.legend()
+    plt.xlabel('$\sigma_x$ [m]')
+    plt.ylabel('$P_c$')
+    
+    plt.show()
+    
+    
+    
+    return
+
+
 def unit_test_sanchez_bpa():
     '''
     This function follows the example of [1] Section 3.2.1.
@@ -105,8 +153,11 @@ def unit_test_sanchez_bpa():
 
 if __name__ == '__main__':
     
-    unit_test_sanchez_bpa()
-
+    plt.close('all')
+    
+    unit_test_dilution()
+        
+    # unit_test_sanchez_bpa()
 
 
 
