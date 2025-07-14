@@ -18,6 +18,8 @@
 import numpy as np
 import pandas as pd
 import os
+import matplotlib.pyplot as plt
+from itertools import cycle
 
 
 import ConjunctionUtilities as ConjUtil
@@ -240,13 +242,20 @@ def kelvins_data_stats(kelvins_df):
 ###############################################################################
 
 
-def verify_kelvins_dict(kelvins_dict):
+def recompute_kelvins_dict(kelvins_dict):
     
     event_id_list = sorted(list(kelvins_dict.keys()))
     
     # Loop over events and CDMs, retrieve data and recompute determinants and
     # collision risk metrics
     for event_id in event_id_list:
+        
+        # Initialize computed output
+        kelvins_dict[event_id]['computed_risk'] = []
+        kelvins_dict[event_id]['computed_mahalanobis_distance'] = []
+        kelvins_dict[event_id]['computed_miss_distance'] = []
+        kelvins_dict[event_id]['computed_relative_speed'] = []
+        kelvins_dict[event_id]['computed_OPM_risk'] = []
         
         num_cdm = len(kelvins_dict[event_id]['time_to_tca'])
         for ii in range(num_cdm):
@@ -276,11 +285,24 @@ def verify_kelvins_dict(kelvins_dict):
             check_c_poscov_det = np.linalg.det(P2_RTN[0:3,0:3]) - c_position_covariance_det
             
             # Compute 2D Pc
+            # provide X1 = [r_RTN, v_RTN] and X2 = [0] to get correct formulation of
+            # encounter frame using existing code
             HBR = t_span + c_span
             X1 = np.concatenate((r_RTN, v_RTN), axis=0)
             X2 = np.zeros((6,1))
             Pc = ConjUtil.Pc2D_Foster(X1, P1_RTN, X2, P2_RTN, HBR)
+            computed_risk = np.log10(Pc)
+            if computed_risk < -30.:
+                computed_risk = -30.
+                
+            # Compute 2D Uc
+            Uc = ConjUtil.Uc2D(X1, P1_RTN, X2, P2_RTN, HBR)
+            computed_OPM_risk = np.log10(Uc)
+            if computed_OPM_risk < -30.:
+                computed_OPM_risk = -30.
             
+            print('')
+            print('event_id', event_id, 'cdm', ii)
             print(check_miss_distance)
             print(check_relative_speed)
             print(check_mahalanobis_distance)
@@ -288,27 +310,92 @@ def verify_kelvins_dict(kelvins_dict):
             print(check_t_poscov_det)
             print(check_c_poscov_det)
             print(Pc)
-            print(np.log10(Pc), risk)
+            print(computed_risk, risk)
+            print(computed_OPM_risk)
             
-            mistake
+            # Store output
+            kelvins_dict[event_id]['computed_risk'].append(computed_risk)
+            kelvins_dict[event_id]['computed_mahalanobis_distance'].append(dM)
+            kelvins_dict[event_id]['computed_miss_distance'].append(np.linalg.norm(r_RTN))
+            kelvins_dict[event_id]['computed_relative_speed'].append(np.linalg.norm(v_RTN))
+            kelvins_dict[event_id]['computed_OPM_risk'].append(computed_OPM_risk)
+        
+        if event_id > 40:
+            break
             
+    
+    
+    return kelvins_dict
+
+
+def plot_kelvins_data(kelvins_dict):
+    
+    event_id_list = [0, 2, 3, 4, 13, 16, 17, 18, 22, 23]
+    
+    plt.figure()
+    
+    colors = cycle(list(plt.cm.hsv(np.linspace(0,1,len(event_id_list)+2))))
+    for event_id in event_id_list:        
+        
+        risk = kelvins_dict[event_id]['risk']
+        time_to_tca = kelvins_dict[event_id]['time_to_tca']
+        
+        plt.plot(time_to_tca, risk, 'o--', color=next(colors), label=str(event_id))
+        
+        
+    plt.gca().invert_xaxis()
+    plt.legend()
+    plt.ylabel('Risk [log10(Pc)]')
+    plt.xlabel('Time to TCA [days]')
+    plt.title('Kelvins Risk')
+    
+    
+    plt.figure()
+    
+    colors = cycle(list(plt.cm.hsv(np.linspace(0,1,len(event_id_list)+2))))
+    for event_id in event_id_list:
+                
+        risk = kelvins_dict[event_id]['computed_risk']
+        time_to_tca = kelvins_dict[event_id]['time_to_tca']
+        
+        plt.plot(time_to_tca, risk, 'o--', color=next(colors), label=str(event_id))
+        
+        
+    plt.gca().invert_xaxis()
+    plt.legend()
+    plt.ylabel('Risk [log10(Pc)]')
+    plt.xlabel('Time to TCA [days]')
+    plt.title('Computed Risk')
+    
+    
+    plt.figure()
+    
+    colors = cycle(list(plt.cm.hsv(np.linspace(0,1,len(event_id_list)+2))))
+    for event_id in event_id_list:
+                
+        risk = kelvins_dict[event_id]['computed_OPM_risk']
+        time_to_tca = kelvins_dict[event_id]['time_to_tca']
+        
+        plt.plot(time_to_tca, risk, 'o--', color=next(colors), label=str(event_id))
+        
+        
+    plt.gca().invert_xaxis()
+    plt.legend()
+    plt.ylabel('OPM Risk [log10(Uc)]')
+    plt.xlabel('Time to TCA [days]')
+    plt.title('Computed OPM Risk')
+    
+    
+    plt.show()
     
     
     return
-
-
-def check_kelvins_Pc():
-    
-    # provide X1 = [r_RTN, v_RTN] and X2 = [0] to get correct formulation of
-    # encounter frame using existing code
-    
-    
-    return
-
 
 
 
 if __name__ == '__main__':
+    
+    plt.close('all')
     
     kelvins_data = os.path.join('data', 'test_data.csv')
     
@@ -316,4 +403,6 @@ if __name__ == '__main__':
     
     kelvins_dict = kelvins_df_to_dict(kelvins_df)
     
-    verify_kelvins_dict(kelvins_dict)
+    kelvins_dict = recompute_kelvins_dict(kelvins_dict)
+    
+    plot_kelvins_data(kelvins_dict)

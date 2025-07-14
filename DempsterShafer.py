@@ -150,14 +150,41 @@ def unit_test_sanchez_bpa():
     return
 
 
+def compute_expected_value():
+    
+    lower = 0.
+    upper = 25.
+    N = 2000
+    x = np.linspace(lower, upper, N)
+    mysum = 0.
+    for ii in range(len(x)):
+        xi = x[ii]
+
+        if xi >= 4. and xi <= 7.:
+            mysum += (0.5/3.)*xi
+            
+        if xi >= 15. and xi <= 25.:
+            mysum += (0.5/10.)*xi
+            
+    print(mysum)
+    expected_value = (mysum/N)*(upper-lower) + lower
+    
+    print(expected_value)
+        
+    
+    return
+
+
 
 if __name__ == '__main__':
     
     plt.close('all')
     
-    unit_test_dilution()
+    # unit_test_dilution()
         
     # unit_test_sanchez_bpa()
+    
+    compute_expected_value()
 
 
 

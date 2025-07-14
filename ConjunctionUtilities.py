@@ -342,17 +342,17 @@ def compute_mahalanobis_distance(r_A, r_B, P_A, P_B):
     diff = r_A - r_B
     M = float(np.sqrt(np.dot(diff.T, np.dot(invP, diff)))[0,0])
     
-    print(r_A)
-    print(r_B)
-    print(P_A)
-    print(P_B)
+    # print(r_A)
+    # print(r_B)
+    # print(P_A)
+    # print(P_B)
     
-    print(Psum)
-    print(invP)
-    print(diff)
-    print(np.dot(diff.T, np.dot(invP, diff)))
-    print(M)
-    print('')
+    # print(Psum)
+    # print(invP)
+    # print(diff)
+    # print(np.dot(diff.T, np.dot(invP, diff)))
+    # print(M)
+    # print('')
     
     return M
 
