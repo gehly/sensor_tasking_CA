@@ -132,20 +132,79 @@ def unit_test_sanchez_bpa():
     HBR = 5.
     
     # Interval 1
-    mu_x = np.array([4., 7.])
-    var_x = np.array([1., 6.25])
+    mu_x1 = np.array([4., 7.])
+    # sig_x1 = np.array([1., 6.25])
+    sig_x1 = np.array([1., 2.5])
     
     # Interval 2
-    mu_x = np.array([15., 25.])
-    var_x = np.array([4., 36.])
+    # mu_x2 = np.array([15., 25.])
+    # sig_x2 = np.array([4., 36.])
+    mu_x2 = np.array([15., 20.])
+    sig_x2 = np.array([2., 6.])
     
     
+    # Draw samples
+    N = 100000
+    x1_list = []
+    x2_list = []
+    x_list = []
+    
+    x1_weight = 0.9
+    for ii in range(N):
+        # mu1 = np.random.rand()*(mu_x1[-1] - mu_x1[0]) + mu_x1[0]
+        # sig1 = np.random.rand()*(sig_x1[-1] - sig_x1[0]) + sig_x1[0]
+        
+        # mu2 = np.random.rand()*(mu_x2[-1] - mu_x2[0]) + mu_x2[0]
+        # sig2 = np.random.rand()*(sig_x2[-1] - sig_x2[0]) + sig_x2[0]
+        
+        # print('')
+        # print(mu1)
+        # print(sig1)
+        
+        # # Sample Gaussian
+        # x1 = np.random.normal(mu1, sig1)
+        # x2 = np.random.normal(mu2, sig2)
+        
+        # x1_list.append(x1)
+        # x2_list.append(x2)
+        
+        # Select distribution to sample
+        if np.random.rand() < x1_weight:
+            mu = np.random.rand()*(mu_x1[-1] - mu_x1[0]) + mu_x1[0]
+            sig = np.random.rand()*(sig_x1[-1] - sig_x1[0]) + sig_x1[0]
+        else:
+            mu = np.random.rand()*(mu_x2[-1] - mu_x2[0]) + mu_x2[0]
+            sig = np.random.rand()*(sig_x2[-1] - sig_x2[0]) + sig_x2[0]
+            
+        x = np.random.normal(mu, sig)
+        x_list.append(x)
+        
+        
+        
+    
+    print('')
+    # print(x1_list)
+    # print(x2_list)
+    
+    # x1_mean = np.mean(x1_list)
+    # x2_mean = np.mean(x2_list)
+    
+    # print(x1_mean)
+    # print(x2_mean)
+    
+    # print((x1_mean + x2_mean)/2.)
+    
+    print(np.mean(x_list))
+    print(np.std(x_list))
+    print(np.std(x_list)**2.)
+    plt.hist(x_list, bins='fd')
+        
     
     
     uvec = np.array([4., 6., 1., 81., 0.])
     Pc = compute_Pc(uvec, HBR)
     
-    print(Pc)
+    # print(Pc)
     
     return
 
@@ -182,9 +241,9 @@ if __name__ == '__main__':
     
     # unit_test_dilution()
         
-    # unit_test_sanchez_bpa()
+    unit_test_sanchez_bpa()
     
-    compute_expected_value()
+    # compute_expected_value()
 
 
 
