@@ -331,7 +331,7 @@ def secondary_params(case_id):
     
     if case_id == 0:
         
-        # Cubesat
+        # 1U Cubesat
         # Impact
         obj_id = 90000
         mass = 1.
@@ -397,56 +397,110 @@ def secondary_params(case_id):
         
     elif case_id == 6:
         
+        # 1U Cubesat
+        # Miss 1000m Along Track
+        obj_id = 96000
+        mass = 1.
+        area = 0.01
+        rho_ric = np.array([0., 1000., 0.]).reshape(3,1)
+        drho_ric = np.array([10., 10., 600.]).reshape(3,1)
+        TCA_hrs = 99.
+        
+    elif case_id == 7:
+        
+        # 3U Cubesat Impact
+        obj_id = 97000
+        mass = 4.           # kg
+        area = 0.03         # m^2
+        rho_ric = np.array([0., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., -15190., 4.]).reshape(3,1)
+        TCA_hrs = 125.
         
     
+    elif case_id == 8:
+        
+        # Rocket Body (SpaceX Merlin-V/Falcon Upper Stage) - DISCOSweb
+        # Impact
+        obj_id = 98000
+        mass = 4300.           # kg
+        area = 40.             # m^2
+        rho_ric = np.array([0., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., -15190., 4.]).reshape(3,1)
+        TCA_hrs = 145.
+        
+        
+    elif case_id == 9:
+        
+        # 1U Cubesat
+        # Miss 50m Radial
+        obj_id = 99000
+        mass = 1.
+        area = 0.01
+        rho_ric = np.array([50., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., -1., 800.]).reshape(3,1)
+        TCA_hrs = 162.
+        
+ 
     
+    return obj_id, mass, area, Cd, Cr, TCA_hrs, rho_ric, drho_ric
+
+
+
+def build_truth_catalog(rso_file, case_id):
+    
+    # Load RSO dict
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    primary_id = 52373
+    
+    # for case_id in range(10):
+
+    rso_dict = create_conjunction(rso_dict, primary_id, case_id)
+    
+    print('')
+    print('number rso', len(rso_dict))
+    
+    
+    pklFile = open( rso_file, 'wb' )
+    pickle.dump([rso_dict], pklFile, -1)
+    pklFile.close()
     
     return
 
 
 
-def build_truth_catalog():
+def create_conjunction(rso_dict, primary_id, case_id, halt_flag=False):
     
-    obj_id, mass, area, Cd, Cr, TCA, rho_ric, drho_ric = secondary_params(case_id)
+    # Primary object data
+    Xo_true = rso_dict[primary_id]['state']
     
-    
-    return
-
-
-
-def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, rho_ric, drho_ric, halt_flag=False):
-    
-    # Asset data
-    Xo_true = rso_dict[asset_id]['state']
+    # Secondary object data
+    secondary_id, mass, area, Cd, Cr, TCA_hrs, rho_ric, drho_ric = \
+        secondary_params(case_id)
     
     # Basic setup parameters
     bodies_to_create = ['Sun', 'Earth', 'Moon']
     bodies = prop.tudat_initialize_bodies(bodies_to_create)    
     
     state_params = {}
-    state_params['mass'] = rso_dict[asset_id]['mass']
-    state_params['area'] = rso_dict[asset_id]['area']
-    state_params['Cd'] = rso_dict[asset_id]['Cd']
-    state_params['Cr'] = rso_dict[asset_id]['Cr']
-    state_params['sph_deg'] = 8
-    state_params['sph_ord'] = 8    
+    state_params['mass'] = rso_dict[primary_id]['mass']
+    state_params['area'] = rso_dict[primary_id]['area']
+    state_params['Cd'] = rso_dict[primary_id]['Cd']
+    state_params['Cr'] = rso_dict[primary_id]['Cr']
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
     state_params['central_bodies'] = ['Earth']
     state_params['bodies_to_create'] = bodies_to_create
 
     int_params = {}
-    int_params['tudat_integrator'] = 'rk4'
-    int_params['step'] = 1.
-    
-    # int_params = {}
-    # int_params['tudat_integrator'] = 'rkf78'
-    # int_params['step'] = 10.
-    # int_params['max_step'] = 1000.
-    # int_params['min_step'] = 1e-3
-    # int_params['rtol'] = 1e-12
-    # int_params['atol'] = 1e-12
+    int_params['tudat_integrator'] = 'dp7'
+    int_params['step'] = 4.
     
     # Integration times
-    t0 = rso_dict[asset_id]['epoch_tdb']
+    t0 = rso_dict[primary_id]['epoch_tdb']
     tf = t0 + TCA_hrs*3600.
     tvec = np.array([t0, tf])
     
@@ -459,17 +513,15 @@ def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, 
     rc_vect = Xf_true[0:3].reshape(3,1)
     vc_vect = Xf_true[3:6].reshape(3,1)
     
-    # rho_ric = np.array([0., 0., 0.]).reshape(3,1)
-    # drho_ric = np.array([100., -15300., 100.]).reshape(3,1)
     
-    rho_eci = coord.ric2eci(rc_vect, vc_vect, rho_ric)
-    #drho_eci = coord.ric2eci(rc_vect, vc_vect, drho_ric)
-    drho_eci = coord.ric2eci_vel(rc_vect, vc_vect, rho_ric, drho_ric)
+    rho_eci = conj.ric2eci(rc_vect, vc_vect, rho_ric)
+    #drho_eci = conj.ric2eci(rc_vect, vc_vect, drho_ric)
+    drho_eci = conj.ric2eci_vel(rc_vect, vc_vect, rho_ric, drho_ric)
     r_eci = rc_vect + rho_eci
     v_eci = vc_vect + drho_eci
     
     Xf_imp_true = np.concatenate((r_eci, v_eci), axis=0)    
-    kep_imp = astro.cart2kep(Xf_imp_true, GME*1e9)
+    kep_imp = cart2kep(Xf_imp_true, 3.986e14)
     
     rp = float(kep_imp[0,0]*(1-kep_imp[1,0]))
     ra = float(kep_imp[0,0]*(1+kep_imp[1,0]))
@@ -481,8 +533,9 @@ def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, 
     print('Xf_true', Xf_true)
     print('Xf_imp_true', Xf_imp_true)
     print('kep_imp', kep_imp)
-    print('rp', rp)
-    print('ra', ra)
+    print('hp', (rp-6378000.)/1000.)
+    print('ha', (ra-6378000.)/1000.)
+    print('inc', float(kep_imp[2,0]))
     print('miss distance', np.linalg.norm(Xf_true[0:3] - Xf_imp_true[0:3]))
     print('impact velocity', np.linalg.norm(Xf_true[3:6] - Xf_imp_true[3:6]))
     print('')
@@ -492,7 +545,6 @@ def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, 
         
         
     # Backpropagate impactor
-    dum, mass, area, Cd, Cr = object_params(impactor_case)
     
     # Basic setup parameters
     bodies_to_create = ['Sun', 'Earth', 'Moon']
@@ -503,21 +555,15 @@ def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, 
     state_params['area'] = area
     state_params['Cd'] = Cd
     state_params['Cr'] = Cr
-    state_params['sph_deg'] = 8
-    state_params['sph_ord'] = 8    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
     state_params['central_bodies'] = ['Earth']
     state_params['bodies_to_create'] = bodies_to_create
 
     int_params = {}
-    int_params['tudat_integrator'] = 'rk4'
-    int_params['step'] = -1.
-    
-    # int_params['tudat_integrator'] = 'rkf78'
-    # int_params['step'] = 10.
-    # int_params['max_step'] = 1000.
-    # int_params['min_step'] = 1e-3
-    # int_params['rtol'] = 1e-12
-    # int_params['atol'] = 1e-12
+    int_params['tudat_integrator'] = 'dp7'
+    int_params['step'] = -4.
+
     
     # Integration times
     tvec = np.array([tf, t0])
@@ -528,25 +574,136 @@ def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, 
     Xo_imp_true = Xout2[0,:].reshape(6,1)
     Xf_imp_check = Xout2[-1,:].reshape(6,1)
     
-    print('')
-    print('Xo true', Xo_true)
-    print('Xf true', Xf_true)
-    print('xf_imp_true', Xf_imp_check)
-    print('Xo_imp_true', Xo_imp_true)
+    # print('')
+    # print('Xo true', Xo_true)
+    # print('Xf true', Xf_true)
+    # print('xf_imp_true', Xf_imp_check)
+    # print('Xo_imp_true', Xo_imp_true)
     
     
     # Add to output
-    rso_dict[impactor_id] = {}
-    rso_dict[impactor_id]['epoch_tdb'] = t0
-    rso_dict[impactor_id]['state'] = Xo_imp_true
-    rso_dict[impactor_id]['mass'] = mass
-    rso_dict[impactor_id]['area'] = area
-    rso_dict[impactor_id]['Cd'] = Cd
-    rso_dict[impactor_id]['Cr'] = Cr
+    rso_dict[secondary_id] = {}
+    rso_dict[secondary_id]['epoch_tdb'] = t0
+    rso_dict[secondary_id]['state'] = Xo_imp_true
+    rso_dict[secondary_id]['mass'] = mass
+    rso_dict[secondary_id]['area'] = area
+    rso_dict[secondary_id]['Cd'] = Cd
+    rso_dict[secondary_id]['Cr'] = Cr
     
     
     
     return rso_dict
+
+
+def cart2kep(cart, GM):
+    '''
+    This function converts a Cartesian state vector in inertial frame to
+    Keplerian orbital elements.
+    
+    Parameters
+    ------
+    cart : 6x1 numpy array
+    
+    Cartesian Coordinates (Inertial Frame)
+    ------
+    cart[0] : x
+      Position in x               [km]
+    cart[1] : y
+      Position in y               [km]
+    cart[2] : z
+      Position in z               [km]
+    cart[3] : dx
+      Velocity in x               [km/s]
+    cart[4] : dy
+      Velocity in y               [km/s]
+    cart[5] : dz
+      Velocity in z               [km/s]
+      
+    Returns
+    ------
+    elem : 6x1 numpy array
+    
+    Keplerian Orbital Elements
+    ------
+    elem[0] : a
+      Semi-Major Axis             [km]
+    elem[1] : e
+      Eccentricity                [unitless]
+    elem[2] : i
+      Inclination                 [deg]
+    elem[3] : RAAN
+      Right Asc Ascending Node    [deg]
+    elem[4] : w
+      Argument of Periapsis       [deg]
+    elem[5] : theta
+      True Anomaly                [deg]    
+      
+    '''
+    
+    # Retrieve input cartesian coordinates
+    r_vect = cart[0:3].reshape(3,1)
+    v_vect = cart[3:6].reshape(3,1)
+
+    # Calculate orbit parameters
+    r = np.linalg.norm(r_vect)
+    ir_vect = r_vect/r
+    v2 = np.linalg.norm(v_vect)**2
+    h_vect = np.cross(r_vect, v_vect, axis=0)
+    h = np.linalg.norm(h_vect)
+
+    # Calculate semi-major axis
+    a = 1./(2./r - v2/GM)     # km
+    
+    # Calculate eccentricity
+    e_vect = np.cross(v_vect, h_vect, axis=0)/GM - ir_vect
+    e = np.linalg.norm(e_vect)
+
+    # Calculate RAAN and inclination
+    ih_vect = h_vect/h
+
+    RAAN = math.atan2(ih_vect[0,0], -ih_vect[1,0])   # rad
+    i = math.acos(ih_vect[2,0])   # rad
+    if RAAN < 0.:
+        RAAN += 2.*math.pi
+
+    # Apply correction for circular orbit, choose e_vect to point
+    # to ascending node
+    if e != 0:
+        ie_vect = e_vect/e
+    else:
+        ie_vect = np.array([[math.cos(RAAN)], [math.sin(RAAN)], [0.]])
+
+    # Find orthogonal unit vector to complete perifocal frame
+    ip_vect = np.cross(ih_vect, ie_vect, axis=0)
+
+    # Form rotation matrix PN
+    PN = np.concatenate((ie_vect, ip_vect, ih_vect), axis=1).T
+
+    # Calculate argument of periapsis
+    w = math.atan2(PN[0,2], PN[1,2])  # rad
+    if w < 0.:
+        w += 2.*math.pi
+
+    # Calculate true anomaly
+    cross1 = np.cross(ie_vect, ir_vect, axis=0)
+    tan1 = np.dot(cross1.T, ih_vect).flatten()[0]
+    tan2 = np.dot(ie_vect.T, ir_vect).flatten()[0]
+    theta = math.atan2(tan1, tan2)    # rad
+    
+    # Update range of true anomaly for elliptical orbits
+    if a > 0. and theta < 0.:
+        theta += 2.*math.pi
+    
+    # Convert angles to deg
+    i *= 180./math.pi
+    RAAN *= 180./math.pi
+    w *= 180./math.pi
+    theta *= 180./math.pi
+    
+    # Form output
+    elem = np.array([[a], [e], [i], [RAAN], [w], [theta]])
+      
+    return elem
 
 
 if __name__ == '__main__':
@@ -557,5 +714,7 @@ if __name__ == '__main__':
     
     # define_primary_object(epoch_tdb_list[0])
 
-    verify_numerical_error()
-
+    # verify_numerical_error()
+    
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    build_truth_catalog(rso_file, 9)
