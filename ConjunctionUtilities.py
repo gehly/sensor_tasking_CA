@@ -705,7 +705,7 @@ def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params,
     bodies : tudat object, optional
         contains parameters for the environment bodies used in propagation        
     rho_min_crit : float, optional
-        critical value of minimum distance (default=0.)
+        critical value of minimum distance (default=0.) [m]
         if > 0, output will contain all close approaches under this distance
     N : int, optional
         order of the Chebyshev Proxy Polynomial approximation (default=16)

@@ -92,227 +92,6 @@ def define_primary_object(epoch_tdb):
     return 
 
 
-def interp_lagrange(X, Y, xx, p):
-    '''
-    This function interpolates data using Lagrange method of order P
-    
-    Parameters
-    ------
-    X : 1D numpy array
-        x-values of data to interpolate
-    Y : 2D numpy array
-        y-values of data to interpolate
-    xx : float
-        single x value to interpolate at
-    p : int
-        order of interpolation
-    
-    Returns
-    ------
-    yy : 1D numpy array
-        interpolated y-value(s)
-        
-    References
-    ------
-    [1] Kharab, A., An Introduction to Numerical Methods: A MATLAB 
-        Approach, 2nd ed., 2005.
-            
-    '''
-    
-    # Number of data points to use for interpolation (e.g. 8,9,10...)
-    N = p + 1
-
-    if (len(X) < N):
-        print('Not enough data points for desired Lagrange interpolation!')
-        
-    # Compute number of elements on either side of middle element to grab
-    No2 = 0.5*N
-    nn  = int(math.floor(No2))
-    
-    # Find index such that X[row0] < xx < X[row0+1]
-    row0 = list(np.where(X <= xx)[0])[-1]
-    
-    # Trim data set
-    # N is even (p is odd)    
-    if (No2-nn == 0): 
-        
-        # adjust row0 in case near data set endpoints
-        if (N == len(X)) or (row0 < nn-1):
-            row0 = nn-1
-        elif (row0 >= (len(X)-nn)):            
-            row0 = len(X) - nn - 1        
-    
-        # Trim to relevant data points
-        X = X[row0-nn+1 : row0+nn+1]
-        Y = Y[row0-nn+1 : row0+nn+1, :]
-
-
-    # N is odd (p is even)
-    else:
-    
-        # adjust row0 in case near data set endpoints
-        if (N == len(X)) or (row0 < nn):
-            row0 = nn
-        elif (row0 > len(X)-nn):
-            row0 = len(X) - nn - 1
-        else:
-            if (xx-X[row0] > 0.5) and (row0+1+nn < len(X)):
-                row0 = row0 + 1
-    
-        # Trim to relevant data points
-        X = X[row0-nn:row0+nn+1]
-        Y = Y[row0-nn:row0+nn+1, :]
-        
-    # Compute coefficients
-    Pj = np.ones((1,N))
-    
-    for jj in range(N):
-        for ii in range(N):
-            
-            if jj != ii:
-                Pj[0, jj] = Pj[0, jj] * (-xx+X[ii])/(-X[jj]+X[ii])
-    
-    
-    yy = np.dot(Pj, Y)
-    
-    return yy
-
-
-def verify_numerical_error():
-    
-    # Per Baak Appx B (2025) and Ravago (2021) apply 20x20 gravity field
-    # Note this will yield ~1000m error after 7 day propagation, but 
-    # to achieve meter level requires 100x100 which is undesirably slow
-    
-    # Also from Baak, DP7 with dt = 4 sec should yield ~1cm numerical error
-    # for 7 day forward/backprop, as verified in this function.
-    
-    # Load primary object data
-    primary_file = os.path.join('data', 'primary_catalog_truth.pkl')
-    pklFile = open(primary_file, 'rb' )
-    data = pickle.load( pklFile )
-    rso_dict = data[0]
-    pklFile.close()
-    
-    obj_id = int(list(rso_dict.keys())[0])
-    
-    # Setup dynamics parameters
-    bodies_to_create = ['Sun', 'Earth', 'Moon']
-    bodies = prop.tudat_initialize_bodies(bodies_to_create)    
-    
-    state_params = {}
-    state_params['mass'] = rso_dict[obj_id]['mass']
-    state_params['area'] = rso_dict[obj_id]['area']
-    state_params['Cd'] = rso_dict[obj_id]['Cd']
-    state_params['Cr'] = rso_dict[obj_id]['Cr']
-    state_params['sph_deg'] = 20
-    state_params['sph_ord'] = 20   
-    state_params['central_bodies'] = ['Earth']
-    state_params['bodies_to_create'] = bodies_to_create
-    
-    int_params = {}
-    int_params['tudat_integrator'] = 'dp7'
-    int_params['step'] = 4.
-    
-    # Initial state and propagation times
-    Xo = rso_dict[obj_id]['state']
-    t0 = rso_dict[obj_id]['epoch_tdb']
-    tf = t0 + 7.*86400.
-    tvec = np.array([t0, tf])
-    
-    print('prop')
-    start = time.time()
-    tout, Xout = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies)
-    dp7_prop_time = time.time() - start
-    Xf = Xout[-1,:].reshape(6,1)
-    
-    # Setup backpropagation
-    int_params['step'] = -4.
-    tvec = np.array([tf, t0])
-    
-    print('backprop impactor')
-    start = time.time()
-    tout2, Xout2 = prop.propagate_orbit(Xf, tvec, state_params, int_params, bodies)
-    dp7_backprop_time = time.time() - start
-    
-    # Compute and plot error
-    error = Xout2 - Xout
-    pos_error = np.linalg.norm(error[:,0:3], axis=1)
-    
-    tdays = [(ti - tout[0])/86400. for ti in tout]
-    
-    plt.figure()
-    plt.semilogy(tdays, pos_error, 'k')
-    # plt.semilogy(tdays, error[:,0], 'r', label='x')
-    # plt.semilogy(tdays, error[:,1], 'b', label='y')
-    # plt.semilogy(tdays, error[:,2], 'g', label='z')
-    plt.title('Forward/Backprop Analysis DP7 step = 4sec')
-    plt.ylabel('Error [m]')
-    plt.xlabel('Time [days]')
-    # plt.legend()
-    
-    
-    # Test variable step integrator
-    int_params['tudat_integrator'] = 'dp87'
-    int_params['step'] = 10.
-    int_params['max_step'] = 1000.
-    int_params['min_step'] = 1e-3
-    int_params['rtol'] = 1e-12
-    int_params['atol'] = 1e-12
-    
-    tvec = np.array([t0, tf])
-    
-    print('variable prop')
-    start = time.time()
-    tout3, Xout3 = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies)
-    dp87_prop_time = time.time() - start
-        
-    # Compute and plot error
-    dp87_err = []
-    for ii in range(len(tout3)):
-        ti = tout3[ii]
-        Xi_var = Xout3[ii,:]
-        Xi_fixed = interp_lagrange(tout, Xout, ti, 8).flatten()
-        
-        print('')
-        print(ii, (ti-t0)/86400.)
-        print(Xi_var)
-        print(Xi_fixed)
-        
-        err = np.linalg.norm(Xi_var[0:3] - Xi_fixed[0:3])
-        print(err)
-        dp87_err.append(err)
-        
-        
-    
-    
-    
-    
-    
-    tdays = [(ti - tout[0])/86400. for ti in tout3]
-    
-    plt.figure()
-    plt.semilogy(tdays, dp87_err, 'k', label='3D pos')
-    plt.title('Variable Step Integrator Analysis DP87 tol=1e-12')
-    plt.ylabel('Error [m]')
-    plt.xlabel('Time [days]')
-    plt.legend()
-    
-    
-    
-    plt.show()
-    
-    print('')
-    print('dp7 prop time', dp7_prop_time)
-    print('dp7 backprop time', dp7_backprop_time)
-    print('dp87 prop time', dp87_prop_time)
-    
-    
-    
-    return
-
-
-
 ###############################################################################
 # Setup Secondary Objects
 ###############################################################################
@@ -357,9 +136,10 @@ def secondary_params(case_id):
         # Impact
         obj_id = 92000
         mass = 260.         # kg
-        area = 11.087       # m^2
+        area = 11.0       # m^2
         rho_ric = np.array([0., 0., 0.]).reshape(3,1)
-        drho_ric = np.array([10., -15190., 4.]).reshape(3,1)
+        # drho_ric = np.array([-4., -5600., 7400.]).reshape(3,1)
+        drho_ric = np.array([0., -7., -300.]).reshape(3,1)
         TCA_hrs = 60.
         
     elif case_id == 3:
@@ -387,23 +167,25 @@ def secondary_params(case_id):
     elif case_id == 5:
         
         # Defunct Starlink
-        # Miss 100m Cross-track
+        #  Miss 1000m Along Track
         obj_id = 95000
         mass = 260.         # kg
-        area = 11.087       # m^2        
-        rho_ric = np.array([0., 0., 100.]).reshape(3,1)
-        drho_ric = np.array([5., -15190., 10.]).reshape(3,1)
+        area = 11.0       # m^2        
+        rho_ric = np.array([0., 1000., 0.]).reshape(3,1)
+        # drho_ric = np.array([-4., -5600., 7400.]).reshape(3,1)
+        drho_ric = np.array([(0., 10., 400.)]).reshape(3,1)
+        # drho_ric = np.array([0., -7., -300.]).reshape(3,1)
         TCA_hrs = 98.
         
     elif case_id == 6:
         
         # 1U Cubesat
-        # Miss 1000m Along Track
+        # Miss 100m Cross Track
         obj_id = 96000
         mass = 1.
         area = 0.01
-        rho_ric = np.array([0., 1000., 0.]).reshape(3,1)
-        drho_ric = np.array([10., 10., 600.]).reshape(3,1)
+        rho_ric = np.array([0., 0., 100.]).reshape(3,1)
+        drho_ric = np.array([10., -15190., 4.]).reshape(3,1)
         TCA_hrs = 99.
         
     elif case_id == 7:
@@ -469,7 +251,6 @@ def build_truth_catalog(rso_file, case_id):
     pklFile.close()
     
     return
-
 
 
 def create_conjunction(rso_dict, primary_id, case_id, halt_flag=False):
@@ -591,8 +372,351 @@ def create_conjunction(rso_dict, primary_id, case_id, halt_flag=False):
     rso_dict[secondary_id]['Cr'] = Cr
     
     
-    
     return rso_dict
+
+
+###############################################################################
+# Verification
+###############################################################################
+
+def verify_numerical_error():
+    
+    # Per Baak Appx B (2025) and Ravago (2021) apply 20x20 gravity field
+    # Note this will yield ~1000m error after 7 day propagation, but 
+    # to achieve meter level requires 100x100 which is undesirably slow
+    
+    # Also from Baak, DP7 with dt = 4 sec should yield ~1cm numerical error
+    # for 7 day forward/backprop, as verified in this function.
+    
+    # Load primary object data
+    primary_file = os.path.join('data', 'primary_catalog_truth.pkl')
+    pklFile = open(primary_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    obj_id = int(list(rso_dict.keys())[0])
+    
+    # Setup dynamics parameters
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)    
+    
+    state_params = {}
+    state_params['mass'] = rso_dict[obj_id]['mass']
+    state_params['area'] = rso_dict[obj_id]['area']
+    state_params['Cd'] = rso_dict[obj_id]['Cd']
+    state_params['Cr'] = rso_dict[obj_id]['Cr']
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp7'
+    int_params['step'] = 4.
+    
+    # Initial state and propagation times
+    Xo = rso_dict[obj_id]['state']
+    t0 = rso_dict[obj_id]['epoch_tdb']
+    tf = t0 + 7.*86400.
+    tvec = np.array([t0, tf])
+    
+    print('prop')
+    start = time.time()
+    tout, Xout = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies)
+    dp7_prop_time = time.time() - start
+    Xf = Xout[-1,:].reshape(6,1)
+    
+    # Setup backpropagation
+    int_params['step'] = -4.
+    tvec = np.array([tf, t0])
+    
+    print('backprop impactor')
+    start = time.time()
+    tout2, Xout2 = prop.propagate_orbit(Xf, tvec, state_params, int_params, bodies)
+    dp7_backprop_time = time.time() - start
+    
+    # Compute and plot error
+    error = Xout2 - Xout
+    pos_error = np.linalg.norm(error[:,0:3], axis=1)
+    
+    tdays = [(ti - tout[0])/86400. for ti in tout]
+    
+    plt.figure()
+    plt.semilogy(tdays, pos_error, 'k')
+    # plt.semilogy(tdays, error[:,0], 'r', label='x')
+    # plt.semilogy(tdays, error[:,1], 'b', label='y')
+    # plt.semilogy(tdays, error[:,2], 'g', label='z')
+    plt.title('Forward/Backprop Analysis DP7 step = 4sec')
+    plt.ylabel('Error [m]')
+    plt.xlabel('Time [days]')
+    # plt.legend()
+    
+    
+    # Test variable step integrator
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 1000.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12
+    
+    tvec = np.array([t0, tf])
+    
+    print('variable prop')
+    start = time.time()
+    tout3, Xout3 = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies)
+    dp87_prop_time = time.time() - start
+        
+    # Compute and plot error
+    dp87_err = []
+    for ii in range(len(tout3)):
+        ti = tout3[ii]
+        Xi_var = Xout3[ii,:]
+        Xi_fixed = interp_lagrange(tout, Xout, ti, 8).flatten()
+        
+        print('')
+        print(ii, (ti-t0)/86400.)
+        print(Xi_var)
+        print(Xi_fixed)
+        
+        err = np.linalg.norm(Xi_var[0:3] - Xi_fixed[0:3])
+        print(err)
+        dp87_err.append(err)
+        
+        
+    
+    tdays = [(ti - tout[0])/86400. for ti in tout3]
+    
+    plt.figure()
+    plt.semilogy(tdays, dp87_err, 'k', label='3D pos')
+    plt.title('Variable Step Integrator Analysis DP87 tol=1e-12')
+    plt.ylabel('Error [m]')
+    plt.xlabel('Time [days]')
+    plt.legend()
+    
+    
+    
+    plt.show()
+    
+    print('')
+    print('dp7 prop time', dp7_prop_time)
+    print('dp7 backprop time', dp7_backprop_time)
+    print('dp87 prop time', dp87_prop_time)
+    
+    return
+
+
+def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
+                                   all_metrics=False):
+    
+    
+    # Load RSO dict
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    # Compute TCA
+    # Basic setup parameters
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)    
+        
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 1000.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12    
+    
+    rso1_params = {}    
+    rso1_params['sph_deg'] = 20
+    rso1_params['sph_ord'] = 20   
+    rso1_params['central_bodies'] = ['Earth']
+    rso1_params['bodies_to_create'] = bodies_to_create
+    rso1_params['mass'] = rso_dict[primary_id]['mass']
+    rso1_params['area'] = rso_dict[primary_id]['area']
+    rso1_params['Cd'] = rso_dict[primary_id]['Cd']
+    rso1_params['Cr'] = rso_dict[primary_id]['Cr']
+       
+    
+    rso2_params = {}    
+    rso2_params['sph_deg'] = 20
+    rso2_params['sph_ord'] = 20   
+    rso2_params['central_bodies'] = ['Earth']
+    rso2_params['bodies_to_create'] = bodies_to_create
+    rso2_params['mass'] = rso_dict[secondary_id]['mass']
+    rso2_params['area'] = rso_dict[secondary_id]['area']
+    rso2_params['Cd'] = rso_dict[secondary_id]['Cd']
+    rso2_params['Cr'] = rso_dict[secondary_id]['Cr']
+    
+    t0 = rso_dict[primary_id]['epoch_tdb']
+    tf = t0 + 7.*86400.
+    trange = np.array([t0, tf])
+    
+    X1_0 = rso_dict[primary_id]['state']    
+    X2_0 = rso_dict[secondary_id]['state']
+    
+    
+    
+    T_list, rho_list = conj.compute_TCA(X1_0, X2_0, trange, rso1_params,
+                                        rso2_params, int_params, bodies=bodies, 
+                                        rho_min_crit=2000.)
+    
+    print('')
+    print('TCA_hrs', [(ti - t0)/3600. for ti in T_list])
+    print(rho_list)
+    
+    
+    if all_metrics:
+        P1_0 = rso_dict[primary_id]['covar']
+        P2_0 = rso_dict[secondary_id]['covar']
+    
+        # Propagate state and covariances to TCA
+        t_tca = T_list[0]
+        tvec = np.array([t0, t_tca])
+        tf, X1_f, P1_f = prop.propagate_state_and_covar(X1_0, P1_0, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+        tf, X2_f, P2_f = prop.propagate_state_and_covar(X2_0, P2_0, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+        
+            
+        # Compute miss distance, mahalanobis distance, Pc, Uc
+        r_A = X1_f[0:3].reshape(3,1)
+        r_B = X2_f[0:3].reshape(3,1)
+        v_A = X1_f[3:6].reshape(3,1)
+        v_B = X2_f[3:6].reshape(3,1)
+        P_A = P1_f[0:3,0:3]
+        P_B = P2_f[0:3,0:3]
+        
+        print(r_A)
+        print(r_B)
+        print(P_A)
+        print(P_B)
+        
+        d2 = conj.compute_euclidean_distance(r_A, r_B)
+        dM = conj.compute_mahalanobis_distance(r_A, r_B, P_A, P_B)
+        vrel = np.linalg.norm(v_A - v_B)
+        
+        radius1 = np.sqrt(rso1_params['area']/np.pi)
+        radius2 = np.sqrt(rso2_params['area']/np.pi)
+        HBR = radius1+radius2
+        
+        Pc = conj.Pc2D_Foster(X1_f, P1_f, X2_f, P2_f, HBR, rtol=1e-8, HBR_type='circle')
+        Uc = conj.Uc2D(X1_f, P1_f, X2_f, P2_f, HBR)
+    
+        
+        # Print results
+        print('')
+        print('obj1', primary_id)
+        print('obj2', secondary_id)
+        print('X1', X1_f)
+        print('X2', X2_f)
+        print('P1', np.sqrt(np.diag(P1_f)))
+        print('P2', np.sqrt(np.diag(P2_f)))
+        
+        print('')
+        print('TCA [hrs]', (T_list[0]-t0)/3600.)
+        print('miss distance', d2)
+        print('mahalanobis distance', dM)
+        print('relative velocity', vrel)
+        print('Pc', Pc)
+        print('Uc', Uc)
+    
+    
+    
+    return
+
+
+###############################################################################
+# Utilities
+###############################################################################
+
+
+def interp_lagrange(X, Y, xx, p):
+    '''
+    This function interpolates data using Lagrange method of order P
+    
+    Parameters
+    ------
+    X : 1D numpy array
+        x-values of data to interpolate
+    Y : 2D numpy array
+        y-values of data to interpolate
+    xx : float
+        single x value to interpolate at
+    p : int
+        order of interpolation
+    
+    Returns
+    ------
+    yy : 1D numpy array
+        interpolated y-value(s)
+        
+    References
+    ------
+    [1] Kharab, A., An Introduction to Numerical Methods: A MATLAB 
+        Approach, 2nd ed., 2005.
+            
+    '''
+    
+    # Number of data points to use for interpolation (e.g. 8,9,10...)
+    N = p + 1
+
+    if (len(X) < N):
+        print('Not enough data points for desired Lagrange interpolation!')
+        
+    # Compute number of elements on either side of middle element to grab
+    No2 = 0.5*N
+    nn  = int(math.floor(No2))
+    
+    # Find index such that X[row0] < xx < X[row0+1]
+    row0 = list(np.where(X <= xx)[0])[-1]
+    
+    # Trim data set
+    # N is even (p is odd)    
+    if (No2-nn == 0): 
+        
+        # adjust row0 in case near data set endpoints
+        if (N == len(X)) or (row0 < nn-1):
+            row0 = nn-1
+        elif (row0 >= (len(X)-nn)):            
+            row0 = len(X) - nn - 1        
+    
+        # Trim to relevant data points
+        X = X[row0-nn+1 : row0+nn+1]
+        Y = Y[row0-nn+1 : row0+nn+1, :]
+
+
+    # N is odd (p is even)
+    else:
+    
+        # adjust row0 in case near data set endpoints
+        if (N == len(X)) or (row0 < nn):
+            row0 = nn
+        elif (row0 > len(X)-nn):
+            row0 = len(X) - nn - 1
+        else:
+            if (xx-X[row0] > 0.5) and (row0+1+nn < len(X)):
+                row0 = row0 + 1
+    
+        # Trim to relevant data points
+        X = X[row0-nn:row0+nn+1]
+        Y = Y[row0-nn:row0+nn+1, :]
+        
+    # Compute coefficients
+    Pj = np.ones((1,N))
+    
+    for jj in range(N):
+        for ii in range(N):
+            
+            if jj != ii:
+                Pj[0, jj] = Pj[0, jj] * (-xx+X[ii])/(-X[jj]+X[ii])
+    
+    
+    yy = np.dot(Pj, Y)
+    
+    return yy
 
 
 def cart2kep(cart, GM):
@@ -717,4 +841,7 @@ if __name__ == '__main__':
     # verify_numerical_error()
     
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    build_truth_catalog(rso_file, 9)
+    
+    # build_truth_catalog(rso_file, 6)
+    
+    test_estimated_catalog_metrics(rso_file, 52373, 99000)
