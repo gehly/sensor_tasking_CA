@@ -318,6 +318,101 @@ def verify_numerical_error():
 ###############################################################################
 
 
+def secondary_params(case_id):
+    '''
+    This function contains all the basic setup parameters for the secondary
+    objects that will have close approaches with the primary.
+    
+    '''
+        
+    # Global Parameters
+    Cd = 2.2
+    Cr = 1.3
+    
+    if case_id == 0:
+        
+        # Cubesat
+        # Impact
+        obj_id = 90000
+        mass = 1.
+        area = 0.01
+        rho_ric = np.array([0., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., -15190., 4.]).reshape(3,1)
+        TCA_hrs = 30.
+        
+    elif case_id == 1:
+        
+        # Rocket Body (SpaceX Merlin-V/Falcon Upper Stage) - DISCOSweb
+        # Miss 100m radial
+        obj_id = 91000
+        mass = 4300.
+        area = 40.
+        rho_ric = np.array([100., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., -1., 800.]).reshape(3,1)
+        TCA_hrs = 42.
+        
+    elif case_id == 2:
+        
+        # Defunct Starlink
+        # Impact
+        obj_id = 92000
+        mass = 260.         # kg
+        area = 11.087       # m^2
+        rho_ric = np.array([0., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., -15190., 4.]).reshape(3,1)
+        TCA_hrs = 60.
+        
+    elif case_id == 3:
+        
+        # 3U Cubesat
+        # Miss 500m Along-Track
+        obj_id = 93000
+        mass = 4.           # kg
+        area = 0.03         # m^2
+        rho_ric = np.array([0., 500., 0.]).reshape(3,1)
+        drho_ric = np.array([10., 10., 600.]).reshape(3,1)
+        TCA_hrs = 80.
+        
+    elif case_id == 4:
+        
+        # Rocket Body (SpaceX Merlin-V/Falcon Upper Stage) - DISCOSweb
+        # Impact
+        obj_id = 94000
+        mass = 4300.           # kg
+        area = 40.             # m^2
+        rho_ric = np.array([0., 0., 0.]).reshape(3,1)
+        drho_ric = np.array([10., 10., 600.]).reshape(3,1)
+        TCA_hrs = 97.
+        
+    elif case_id == 5:
+        
+        # Defunct Starlink
+        # Miss 100m Cross-track
+        obj_id = 95000
+        mass = 260.         # kg
+        area = 11.087       # m^2        
+        rho_ric = np.array([0., 0., 100.]).reshape(3,1)
+        drho_ric = np.array([5., -15190., 10.]).reshape(3,1)
+        TCA_hrs = 98.
+        
+    elif case_id == 6:
+        
+        
+    
+    
+    
+    return
+
+
+
+def build_truth_catalog():
+    
+    obj_id, mass, area, Cd, Cr, TCA, rho_ric, drho_ric = secondary_params(case_id)
+    
+    
+    return
+
+
 
 def create_conjunction(rso_dict, asset_id, impactor_id, impactor_case, TCA_hrs, rho_ric, drho_ric, halt_flag=False):
     
