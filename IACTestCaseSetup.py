@@ -629,6 +629,69 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
 
 
 ###############################################################################
+# Sensor Setup
+###############################################################################
+
+def define_sensors():
+    
+    # TIRA tracking radar
+    # Dieter Mehrholz "A Tracking and Imaging Radar System for Space Object 
+    # Reconnaissance" (1996)
+    latitude_rad = np.radians(50.6174)
+    longitude_rad = np.radians(7.1308)
+    height_m = 294.6
+    beamwidth_rad = np.radians(0.45)
+        
+    # Constraints/Limits
+    # Cerutti-Maori (SDC8) for range limit of 5000 km
+    az_lim = [0., 2.*np.pi]  # rad
+    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
+    rg_lim = [0., 5000.*1000.]   # m
+    sun_el_mask = -np.pi  # rad
+    
+    # Measurement types and noise
+    # Approximated from Cerruti-Maori (SDC8)
+    meas_types = ['rg', 'rr', 'az', 'el']
+    sigma_dict = {}
+    sigma_dict['rg'] = 10.                  # m
+    sigma_dict['rr'] = 5.                   # m/s
+    sigma_dict['az'] = np.radians(0.01)     # rad
+    sigma_dict['el'] = np.radians(0.01)    # rad
+    
+    
+    # ALTAIR radar
+    # Reagan Test Site (Kwajalein Atoll)
+    # Location from Vallado
+    # Beamwidth from Abouzahra and Avent (1994) Table 1
+    latitude_rad = np.radians(9.39)
+    longitude_rad = np.radians(167.48)
+    height_m = np.radians(62.7)
+    beamwidth_rad = np.radians(1.1)  # 1.1 deg (UHF) or 2.8 deg (VHF)
+    
+    # Constraints/Limits
+    # Vallado Table 4-3 for range limit of 4500 km
+    az_lim = [0., 2.*np.pi]  # rad
+    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
+    rg_lim = [0., 4500.*1000.]   # m
+    sun_el_mask = -np.pi  # rad
+    
+    # Measurement types and noise
+    # Range from Abouzahra, angles approximated from Vallado
+    meas_types = ['rg', 'az', 'el']
+    sigma_dict = {}
+    sigma_dict['rg'] = 13.5                  # m
+    sigma_dict['az'] = np.radians(0.03)     # rad
+    sigma_dict['el'] = np.radians(0.01)    # rad
+    
+    
+    
+    
+    return
+
+
+
+
+###############################################################################
 # Utilities
 ###############################################################################
 
@@ -844,4 +907,4 @@ if __name__ == '__main__':
     
     # build_truth_catalog(rso_file, 6)
     
-    test_estimated_catalog_metrics(rso_file, 52373, 99000)
+    # test_estimated_catalog_metrics(rso_file, 52373, 99000)
