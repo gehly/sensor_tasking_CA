@@ -173,6 +173,9 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
             resids: px1 numpy array, measurement residuals at tk [meters and/or radians]
         
     '''
+    
+    # TODO: measurements file needs to include sensor_id for each time
+    # then retrieve sensor_params for the correct sensor_id
         
     # Retrieve data from input parameters
     t0 = state_params['epoch_tdb']

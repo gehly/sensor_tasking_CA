@@ -14,7 +14,9 @@ from tudatpy.numerical_simulation import environment_setup
 # Sensors and Measurements
 ###############################################################################
 
-def define_radar_sensor(latitude_rad, longitude_rad, height_m):
+def define_radar_sensor(latitude_rad, longitude_rad, height_m, beamwidth_rad,
+                        az_lim, el_lim, rg_lim, sun_el_mask, meas_types,
+                        sigma_dict):
     '''
     This function will generate the sensor parameters dictionary for a radar
     sensor provided the location in latitude, longitude, height.
@@ -41,37 +43,13 @@ def define_radar_sensor(latitude_rad, longitude_rad, height_m):
     # Compute sensor location in ECEF/ITRF
     sensor_ecef = latlonht2ecef(latitude_rad, longitude_rad, height_m)
         
-    # FOV dimensions
-    LAM_deg = 10.   # deg
-    PHI_deg = 10.   # deg
-    
-    # Convert to radians
-    LAM_half = 0.5*LAM_deg*np.pi/180
-    PHI_half = 0.5*PHI_deg*np.pi/180
-    FOV_hlim = [-LAM_half, LAM_half]
-    FOV_vlim = [-PHI_half, PHI_half]
-    
-    # Constraints/Limits
-    az_lim = [0., 2.*np.pi]  # rad
-    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
-    rg_lim = [0., 5000.*1000.]   # m
-    sun_el_mask = -np.pi  # rad
-    
-    # Measurement types and noise
-    meas_types = ['rg', 'ra', 'dec']
-    sigma_dict = {}
-    sigma_dict['rg'] = 10.               # m
-    sigma_dict['ra'] = 0.1*np.pi/180.    # rad
-    sigma_dict['dec'] = 0.1*np.pi/180.   # rad
-        
     # Location and constraints
     sensor_params = {}
     sensor_params['sensor_ecef'] = sensor_ecef
     sensor_params['el_lim'] = el_lim
     sensor_params['az_lim'] = az_lim
     sensor_params['rg_lim'] = rg_lim
-    sensor_params['FOV_hlim'] = FOV_hlim
-    sensor_params['FOV_vlim'] = FOV_vlim
+    sensor_params['beamwidth'] = beamwidth_rad
     sensor_params['sun_elmask'] = sun_el_mask
     
     # Measurements and noise

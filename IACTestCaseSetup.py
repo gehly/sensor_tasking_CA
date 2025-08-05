@@ -19,6 +19,7 @@ from tudatpy.astro.time_conversion import DateTime
 # Import utility functions
 import ConjunctionUtilities as conj
 import TudatPropagator as prop
+import SensorTasking as sensor
 
 
 ###############################################################################
@@ -376,6 +377,89 @@ def create_conjunction(rso_dict, primary_id, case_id, halt_flag=False):
 
 
 ###############################################################################
+# Sensor Setup
+###############################################################################
+
+def define_sensors():
+    
+    sensor_dict = {}
+    
+    # TIRA tracking radar
+    # Dieter Mehrholz "A Tracking and Imaging Radar System for Space Object 
+    # Reconnaissance" (1996)
+    latitude_rad = np.radians(50.6174)
+    longitude_rad = np.radians(7.1308)
+    height_m = 294.6
+    beamwidth_rad = np.radians(0.45)
+        
+    # Constraints/Limits
+    # Cerutti-Maori (SDC8) for range limit of 5000 km
+    az_lim = [0., 2.*np.pi]  # rad
+    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
+    rg_lim = [0., 5000.*1000.]   # m
+    sun_el_mask = -np.pi  # rad
+    
+    # Measurement types and noise
+    # Approximated from Cerruti-Maori (SDC8)
+    meas_types = ['rg', 'rr', 'az', 'el']
+    sigma_dict = {}
+    sigma_dict['rg'] = 10.                  # m
+    sigma_dict['rr'] = 5.                   # m/s
+    sigma_dict['az'] = np.radians(0.01)     # rad
+    sigma_dict['el'] = np.radians(0.01)    # rad
+    
+    
+    sensor_dict['tira'] = \
+        sensor.define_radar_sensor(latitude_rad, longitude_rad, height_m,
+                                   beamwidth_rad, az_lim, el_lim, rg_lim, 
+                                   sun_el_mask, meas_types, sigma_dict)
+    
+    
+    
+    
+    # ALTAIR radar
+    # Reagan Test Site (Kwajalein Atoll)
+    # Location from Vallado
+    # Beamwidth from Abouzahra and Avent (1994) Table 1
+    latitude_rad = np.radians(9.39)
+    longitude_rad = np.radians(167.48)
+    height_m = np.radians(62.7)
+    beamwidth_rad = np.radians(1.1)  # 1.1 deg (UHF) or 2.8 deg (VHF)
+    
+    # Constraints/Limits
+    # Vallado Table 4-3 for range limit of 4500 km
+    az_lim = [0., 2.*np.pi]  # rad
+    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
+    rg_lim = [0., 4500.*1000.]   # m
+    sun_el_mask = -np.pi  # rad
+    
+    # Measurement types and noise
+    # Range from Abouzahra, angles approximated from Vallado
+    meas_types = ['rg', 'az', 'el']
+    sigma_dict = {}
+    sigma_dict['rg'] = 13.5                  # m
+    sigma_dict['az'] = np.radians(0.03)     # rad
+    sigma_dict['el'] = np.radians(0.01)    # rad
+    
+    
+    sensor_dict['altair'] = \
+        sensor.define_radar_sensor(latitude_rad, longitude_rad, height_m,
+                                   beamwidth_rad, az_lim, el_lim, rg_lim, 
+                                   sun_el_mask, meas_types, sigma_dict)
+        
+        
+    print(sensor_dict)
+    
+    sensor_file = os.path.join('data', 'sensor_data.pkl')
+    pklFile = open( sensor_file, 'wb' )
+    pickle.dump([sensor_dict], pklFile, -1)
+    pklFile.close()
+    
+    
+    return
+
+
+###############################################################################
 # Verification
 ###############################################################################
 
@@ -628,65 +712,7 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     return
 
 
-###############################################################################
-# Sensor Setup
-###############################################################################
 
-def define_sensors():
-    
-    # TIRA tracking radar
-    # Dieter Mehrholz "A Tracking and Imaging Radar System for Space Object 
-    # Reconnaissance" (1996)
-    latitude_rad = np.radians(50.6174)
-    longitude_rad = np.radians(7.1308)
-    height_m = 294.6
-    beamwidth_rad = np.radians(0.45)
-        
-    # Constraints/Limits
-    # Cerutti-Maori (SDC8) for range limit of 5000 km
-    az_lim = [0., 2.*np.pi]  # rad
-    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
-    rg_lim = [0., 5000.*1000.]   # m
-    sun_el_mask = -np.pi  # rad
-    
-    # Measurement types and noise
-    # Approximated from Cerruti-Maori (SDC8)
-    meas_types = ['rg', 'rr', 'az', 'el']
-    sigma_dict = {}
-    sigma_dict['rg'] = 10.                  # m
-    sigma_dict['rr'] = 5.                   # m/s
-    sigma_dict['az'] = np.radians(0.01)     # rad
-    sigma_dict['el'] = np.radians(0.01)    # rad
-    
-    
-    # ALTAIR radar
-    # Reagan Test Site (Kwajalein Atoll)
-    # Location from Vallado
-    # Beamwidth from Abouzahra and Avent (1994) Table 1
-    latitude_rad = np.radians(9.39)
-    longitude_rad = np.radians(167.48)
-    height_m = np.radians(62.7)
-    beamwidth_rad = np.radians(1.1)  # 1.1 deg (UHF) or 2.8 deg (VHF)
-    
-    # Constraints/Limits
-    # Vallado Table 4-3 for range limit of 4500 km
-    az_lim = [0., 2.*np.pi]  # rad
-    el_lim = [5.*np.pi/180., np.pi/2.]  # rad
-    rg_lim = [0., 4500.*1000.]   # m
-    sun_el_mask = -np.pi  # rad
-    
-    # Measurement types and noise
-    # Range from Abouzahra, angles approximated from Vallado
-    meas_types = ['rg', 'az', 'el']
-    sigma_dict = {}
-    sigma_dict['rg'] = 13.5                  # m
-    sigma_dict['az'] = np.radians(0.03)     # rad
-    sigma_dict['el'] = np.radians(0.01)    # rad
-    
-    
-    
-    
-    return
 
 
 
@@ -903,8 +929,10 @@ if __name__ == '__main__':
 
     # verify_numerical_error()
     
-    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     
     # build_truth_catalog(rso_file, 6)
     
     # test_estimated_catalog_metrics(rso_file, 52373, 99000)
+    
+    define_sensors()
