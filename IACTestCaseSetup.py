@@ -409,7 +409,7 @@ def define_sensors():
     sigma_dict['el'] = np.radians(0.01)    # rad
     
     
-    sensor_dict['tira'] = \
+    sensor_dict['TIRA'] = \
         sensor.define_radar_sensor(latitude_rad, longitude_rad, height_m,
                                    beamwidth_rad, az_lim, el_lim, rg_lim, 
                                    sun_el_mask, meas_types, sigma_dict)
@@ -442,7 +442,7 @@ def define_sensors():
     sigma_dict['el'] = np.radians(0.01)    # rad
     
     
-    sensor_dict['altair'] = \
+    sensor_dict['ALTAIR'] = \
         sensor.define_radar_sensor(latitude_rad, longitude_rad, height_m,
                                    beamwidth_rad, az_lim, el_lim, rg_lim, 
                                    sun_el_mask, meas_types, sigma_dict)
@@ -756,8 +756,90 @@ def generate_visibility_dict(rso_file, sensor_file, visibility_file):
     return
 
 
-def compute_visibility_stats():
+def compute_visibility_stats(rso_file, visibility_file, obj_id_list):
     
+    
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(visibility_file, 'rb' )
+    data = pickle.load( pklFile )
+    visibility_dict = data[0]
+    pklFile.close()
+    
+    t0 = rso_dict[obj_id_list[0]]['epoch_tdb']
+        
+    for sensor_id in visibility_dict:
+        
+        colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(obj_id_list)))
+        yval = 1
+        fig, ax = plt.subplots()
+        
+        for obj_id in obj_id_list:
+            
+            # Check if any visible passes
+            if obj_id not in visibility_dict[sensor_id]:
+                print('\nSensor', sensor_id, 'has no visibile passes for', obj_id)
+                continue
+            
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+            rg_list = visibility_dict[sensor_id][obj_id]['rg_list']
+            az_list = visibility_dict[sensor_id][obj_id]['az_list']
+            el_list = visibility_dict[sensor_id][obj_id]['el_list']
+            
+            pass_dict = sensor.compute_pass(tk_list, rg_list, az_list, el_list)
+            start_list = pass_dict['start_list']
+            stop_list = pass_dict['stop_list']
+            TCA_list = pass_dict['TCA_list']
+            TME_list = pass_dict['TME_list']
+            rg_min_list = pass_dict['rg_min_list']
+            el_max_list = pass_dict['el_max_list']
+            
+            npass = len(start_list)
+            duration_list = [(stop - start) for stop, start in zip(stop_list, start_list)]
+            
+            print('\nSensor', sensor_id, 'observing object', obj_id)
+            print('Number of passes:', npass)
+            print('Pass Durations [sec]', duration_list)
+            
+            # Setup for plots
+            thrs = [(tk - t0)/3600. for tk in tk_list]
+            rg_km = [rg/1000. for rg in rg_list]
+            az_deg = [np.degrees(az) for az in az_list]
+            el_deg = [np.degrees(el) for el in el_list]
+            
+            TCA_inds = [tk_list.index(TCA) for TCA in TCA_list]
+            
+            
+            # plt.figure()
+            # plt.subplot(3,1,1)
+            # plt.plot(thrs, rg_km, 'k.')
+            # plt.ylabel('Range [km]')
+            # plt.title('Sensor ' + sensor_id + ' observing object ' + str(obj_id))
+            # plt.subplot(3,1,2)
+            # plt.plot(thrs, az_deg, 'k.')
+            # plt.ylabel('Az [deg]')
+            # plt.subplot(3,1,3)
+            # plt.plot(thrs, el_deg, 'k.')
+            # plt.ylabel('El [deg]')
+            # plt.xlabel('Time [hours]')
+            
+            
+            
+            # plot all together using different rows for each object and square markers
+            plt.plot(thrs, [yval]*len(tk_list), 's', color=colors[yval-1])
+            
+            yval += 1
+        
+        ax.set_yticks(range(1,len(obj_id_list)+1), labels=[str(obj_id) for obj_id in obj_id_list])
+        ax.set_xlabel('Time [hours]')
+        ax.set_title('Visibility from ' + sensor_id)
+        
+            
+            
+    plt.show()
     
     return
 
@@ -986,9 +1068,11 @@ if __name__ == '__main__':
     
     # define_sensors()
     
-    generate_visibility_dict(rso_file, sensor_file, visibility_file)
+    # generate_visibility_dict(rso_file, sensor_file, visibility_file)
 
-
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                   97000, 98000, 99000]
+    compute_visibility_stats(rso_file, visibility_file, obj_id_list)
 
 
 

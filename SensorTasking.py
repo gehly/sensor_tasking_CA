@@ -408,10 +408,90 @@ def compute_visible_passes(tvec, rso_dict, sensor_dict, int_params, bodies=None)
     return visibility_dict
 
 
-def compute_pass():
+def compute_pass(tk_list, rg_list, az_list, el_list):
+    
+    # Allowable gap to still be considered the same pass
+    max_gap = 600.
+    
+    # Initialze output
+    start_list = []
+    stop_list = []
+    TCA_list = []
+    TME_list = []
+    rg_min_list = []
+    el_max_list = []
+    
+    # Loop over times
+    rg_min = 1e12
+    el_max = -1.
+    tk_prior = tk_list[0]
+    start = tk_list[0]
+    stop = tk_list[0]
+    TCA = tk_list[0]
+    TME = tk_list[0]
+    for kk in range(len(tk_list)):
+        
+        tk = tk_list[kk]
+        rg = rg_list[kk]
+        el = el_list[kk]
+        
+        # If current time is close to previous, pass continues
+        if (tk - tk_prior) < (max_gap+1.):
+
+            # Update pass stop time and tk_prior for next iteration
+            stop = tk
+            tk_prior = tk
+            
+            # Check if this is pass time of closest approach (TCA)
+            if rg < rg_min:
+                TCA = tk
+                rg_min = float(rg)
+            
+            # Check if this is pass time of maximum elevation (TME)
+            if el > el_max:
+                TME = tk
+                el_max = float(el)
+
+        # If current time is far from previous or if we reached
+        # the end of tk_list, pass has ended
+        if ((tk - tk_prior) >= (max_gap+1.) or tk == tk_list[-1]):
+            
+            # Store stop time if at end of tk_list
+            if tk == tk_list[-1]:
+                stop = tk
+            
+            # Store output
+            start_list.append(start)
+            stop_list.append(stop)
+            TCA_list.append(TCA)
+            TME_list.append(TME)
+            rg_min_list.append(rg_min)
+            el_max_list.append(el_max)
+            
+            # Reset for new pass next round
+            start = tk
+            TCA = tk
+            TME = tk
+            stop = tk
+            tk_prior = tk
+            
+            # TODO - LOGIC ERROR
+            # Test this code to reset these params
+            rg_min = 1e12
+            el_max = -1
     
     
-    return
+    # Store output
+    pass_dict = {}
+    pass_dict['start_list'] = start_list
+    pass_dict['stop_list'] = stop_list
+    pass_dict['TCA_list'] = TCA_list
+    pass_dict['TME_list'] = TME_list
+    pass_dict['rg_min_list'] = rg_min_list
+    pass_dict['el_max_list'] = el_max_list
+    
+    
+    return pass_dict
 
 
 ###############################################################################
