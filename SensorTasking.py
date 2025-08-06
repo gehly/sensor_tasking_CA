@@ -253,7 +253,7 @@ def check_visibility(tk, Xk, sensor_params, bodies=None):
     # TODO: Lighting constraints for optical sensors
     
     
-    return vis_flag
+    return vis_flag, rg, az, el
 
 
 def compute_visible_passes(tvec, rso_dict, sensor_dict, int_params, bodies=None):
@@ -335,7 +335,11 @@ def compute_visible_passes(tvec, rso_dict, sensor_dict, int_params, bodies=None)
     # Loop over objects
     t0_all = float(tvec[0])
     tf_all = float(tvec[-1])
+    visibility_dict = {}
     for obj_id in obj_id_list:
+        
+        print('')
+        print('obj_id', obj_id)
                 
         # Retrieve initial state and epoch
         t0_obj = rso_dict[obj_id]['epoch_tdb']
@@ -379,14 +383,35 @@ def compute_visible_passes(tvec, rso_dict, sensor_dict, int_params, bodies=None)
                 sensor_params = sensor_dict[sensor_id]
                 
                 # Check visibility
-                vis_flag = check_visibility(tk, Xk, sensor_params, bodies)
+                vis_flag, rg, az, el = check_visibility(tk, Xk, sensor_params,
+                                                        bodies)
                 
                 # Store output
-                
+                if vis_flag:
+                    
+                    if sensor_id not in visibility_dict:
+                        visibility_dict[sensor_id] = {}
+                        
+                    if obj_id not in visibility_dict[sensor_id]:
+                        visibility_dict[sensor_id][obj_id] = {}
+                        visibility_dict[sensor_id][obj_id]['tk_list'] = []
+                        visibility_dict[sensor_id][obj_id]['rg_list'] = []
+                        visibility_dict[sensor_id][obj_id]['el_list'] = []
+                        visibility_dict[sensor_id][obj_id]['az_list'] = []
+                        
+                    visibility_dict[sensor_id][obj_id]['tk_list'].append(tk)
+                    visibility_dict[sensor_id][obj_id]['rg_list'].append(rg)
+                    visibility_dict[sensor_id][obj_id]['az_list'].append(az)
+                    visibility_dict[sensor_id][obj_id]['el_list'].append(el)
+                    
+    
+    return visibility_dict
+
+
+def compute_pass():
     
     
     return
-
 
 
 ###############################################################################

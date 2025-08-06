@@ -401,10 +401,10 @@ def define_sensors():
     
     # Measurement types and noise
     # Approximated from Cerruti-Maori (SDC8)
-    meas_types = ['rg', 'rr', 'az', 'el']
+    meas_types = ['rg', 'az', 'el']
     sigma_dict = {}
     sigma_dict['rg'] = 10.                  # m
-    sigma_dict['rr'] = 5.                   # m/s
+    # sigma_dict['rr'] = 5.                   # m/s
     sigma_dict['az'] = np.radians(0.01)     # rad
     sigma_dict['el'] = np.radians(0.01)    # rad
     
@@ -430,15 +430,15 @@ def define_sensors():
     # Vallado Table 4-3 for range limit of 4500 km
     az_lim = [0., 2.*np.pi]  # rad
     el_lim = [5.*np.pi/180., np.pi/2.]  # rad
-    rg_lim = [0., 4500.*1000.]   # m
+    rg_lim = [0., 5000.*1000.]               # [0., 4500.*1000.]   # m
     sun_el_mask = -np.pi  # rad
     
     # Measurement types and noise
     # Range from Abouzahra, angles approximated from Vallado
     meas_types = ['rg', 'az', 'el']
     sigma_dict = {}
-    sigma_dict['rg'] = 13.5                  # m
-    sigma_dict['az'] = np.radians(0.03)     # rad
+    sigma_dict['rg'] = 10.0   # 13.5 (Abouzahra)                  # m
+    sigma_dict['az'] = np.radians(0.01)     # 0.03 (Vallado) # rad
     sigma_dict['el'] = np.radians(0.01)    # rad
     
     
@@ -712,7 +712,54 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     return
 
 
+def generate_visibility_dict(rso_file, sensor_file, visibility_file):
+    
+    # Load objects and sensors
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(sensor_file, 'rb' )
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()
+    
+    # Setup dynamics parameters
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create) 
+    
+    # Setup tvec and integration parameters
+    obj_id = list(rso_dict.keys())[0]
+    t0 = rso_dict[obj_id]['epoch_tdb']
+    tf = t0 + 86400.
+    tvec = np.array([t0, tf])
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp7'
+    int_params['step'] = 10.
+    
+    
+    visibility_dict = sensor.compute_visible_passes(tvec, rso_dict,
+                                                    sensor_dict, int_params,
+                                                    bodies)
+    
+    
+    print(visibility_dict)
+    
+    # Save visibility file
+    pklFile = open(visibility_file, 'wb')
+    pickle.dump([visibility_dict], pklFile, -1)
+    pklFile.close()
+    
+    
+    return
 
+
+def compute_visibility_stats():
+    
+    
+    return
 
 
 
@@ -929,10 +976,30 @@ if __name__ == '__main__':
 
     # verify_numerical_error()
     
-    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    sensor_file = os.path.join('data', 'sensor_data.pkl')
+    visibility_file = os.path.join('data', 'visibility_data.pkl')
     
     # build_truth_catalog(rso_file, 6)
     
     # test_estimated_catalog_metrics(rso_file, 52373, 99000)
     
-    define_sensors()
+    # define_sensors()
+    
+    generate_visibility_dict(rso_file, sensor_file, visibility_file)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
