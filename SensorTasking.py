@@ -4,10 +4,13 @@ from datetime import datetime, timedelta
 import os
 import pandas as pd
 import pickle
+import copy
 
 
 from tudatpy.numerical_simulation import environment_setup
 
+# Import utility functions
+import TudatPropagator as prop
 
 
 ###############################################################################
@@ -45,6 +48,7 @@ def define_radar_sensor(latitude_rad, longitude_rad, height_m, beamwidth_rad,
         
     # Location and constraints
     sensor_params = {}
+    sensor_params['sensor_type'] = 'radar'
     sensor_params['sensor_ecef'] = sensor_ecef
     sensor_params['el_lim'] = el_lim
     sensor_params['az_lim'] = az_lim
@@ -117,6 +121,7 @@ def define_optical_sensor(latitude_rad, longitude_rad, height_m):
         
     # Location and constraints
     sensor_params = {}
+    sensor_params['sensor_type'] = 'optical'
     sensor_params['sensor_ecef'] = sensor_ecef
     sensor_params['el_lim'] = el_lim
     sensor_params['az_lim'] = az_lim
@@ -191,7 +196,7 @@ def compute_measurement(tk, X, sensor_params, bodies=None):
     for mtype in meas_types:
         
         if mtype == 'rg':
-            Y[ii] = rg  # m
+            Y[ii] = rg      # m
             
         elif mtype == 'ra':
             Y[ii] = math.atan2(rho_hat_eci[1], rho_hat_eci[0]) # rad
@@ -201,8 +206,8 @@ def compute_measurement(tk, X, sensor_params, bodies=None):
     
         elif mtype == 'az':
             Y[ii] = math.atan2(rho_hat_enu[0], rho_hat_enu[1])  # rad  
-            # if Y[ii] < 0.:
-            #     Y[ii] += 2.*np.pi
+            if Y[ii] < 0.:
+                Y[ii] += 2.*np.pi
             
         elif mtype == 'el':
             Y[ii] = math.asin(rho_hat_enu[2])  # rad
@@ -219,7 +224,168 @@ def compute_measurement(tk, X, sensor_params, bodies=None):
 # Visibility 
 ###############################################################################
 
+def check_visibility(tk, Xk, sensor_params, bodies=None):
+    
+    # Initialize output
+    vis_flag = True
+    
+    # Geometric constraints
+    # Compute range, az, el
+    sensor_params_vis = {}
+    sensor_params_vis['meas_types'] = ['rg', 'az', 'el']
+    sensor_params_vis['sensor_ecef'] = sensor_params['sensor_ecef']
+    
+    meas = compute_measurement(tk, Xk, sensor_params_vis, bodies)
+    rg = meas[0,0]
+    az = meas[1,0]
+    el = meas[2,0]
+    
+    # Check constraints
+    if az < sensor_params['az_lim'][0] or az > sensor_params['az_lim'][1]:
+        vis_flag = False
+        
+    if el < sensor_params['el_lim'][0] or el > sensor_params['el_lim'][1]:
+        vis_flag = False
+        
+    if rg < sensor_params['rg_lim'][0] or rg > sensor_params['rg_lim'][1]:
+        vis_flag = False
+    
+    # TODO: Lighting constraints for optical sensors
+    
+    
+    return vis_flag
 
+
+def compute_visible_passes(tvec, rso_dict, sensor_dict, int_params, bodies=None):
+    '''
+    This function computes visible passes for a given object catalog and 
+    sensors.
+    
+    Parameters
+    ------
+    tvec : 1D numpy array
+        initial and final time of visibility window seconds since J2000 TDB
+    rso_dict : dictionary
+        object state parameters including pos/vel in ECI [m] and physical 
+        attributes
+    sensor_dict : dictionary
+        sensor parameters including location in ECEF [m] and constraints
+        
+    Returns
+    ------    
+    
+    
+    '''
+    
+    # Retrieve input data
+    obj_id_list = sorted(list(rso_dict.keys()))
+    sensor_id_list = sorted(list(sensor_dict.keys()))
+    
+    # Make copy of rso_dict to update as objects are propagated
+    rso_dict2 = copy.deepcopy(rso_dict)
+    
+    # Standard orbit propagation parameters
+    state_params = {}
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = ['Sun', 'Earth', 'Moon']
+    
+    
+    # Propagate all objects to same starting epoch for visibility check
+    # Note: Do not use this code, it is not needed or verified
+    # keeping it for reference if needed later
+    # t0_all = tvec[0]
+    # for obj_id in obj_id_list:
+        
+    #     # Check if propagation is needed
+    #     t0_obj = rso_dict[obj_id]['epoch_tdb']
+    #     if abs(t0_obj - t0_all) < 1e-12:
+    #         continue
+        
+    #     # Setup forward or backpropagation interval
+    #     tprop = np.array([t0_obj, t0_all])
+    #     if t0_obj < t0_all:
+    #         int_params['step'] = 4.  
+    #         backprop = False
+    #     else:
+    #         int_params['step'] = -4.  
+    #         backprop = True
+        
+    #     # Setup initial state and object parameters
+    #     Xo_obj = rso_dict[obj_id]['state']
+    #     state_params['mass'] = rso_dict[obj_id]['mass']
+    #     state_params['area'] = rso_dict[obj_id]['area']
+    #     state_params['Cd'] = rso_dict[obj_id]['Cd']
+    #     state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+    #     # Propagate orbit
+    #     tout, Xout = prop.propagate_orbit(Xo_obj, tprop, state_params, int_params, bodies)
+    
+    #     # Retrieve and store updated state
+    #     if backprop:
+    #         Xf = Xout[0,:].reshape(6,1)
+    #     else:
+    #         Xf = Xout[-1,:].reshape(6,1)
+            
+    #     rso_dict[obj_id]['epoch_tdb'] = t0_all
+    #     rso_dict[obj_id]['state'] = Xf
+    
+    
+    # Loop over objects
+    t0_all = float(tvec[0])
+    tf_all = float(tvec[-1])
+    for obj_id in obj_id_list:
+                
+        # Retrieve initial state and epoch
+        t0_obj = rso_dict[obj_id]['epoch_tdb']
+        Xo = rso_dict[obj_id]['state']
+        state_params['mass'] = rso_dict[obj_id]['mass']
+        state_params['area'] = rso_dict[obj_id]['area']
+        state_params['Cd'] = rso_dict[obj_id]['Cd']
+        state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+        # Conduct backpropagation if needed
+        if t0_obj > t0_all:
+            backprop_params = {}
+            backprop_params['tudat_integrator'] = 'dp7'
+            backprop_params['step'] = -4.
+            
+            tprop = np.array([t0_obj, t0_all])
+            tout, Xout = prop.propagate_orbit(Xo, tprop, state_params, backprop_params, bodies)
+            
+            # Set initial state and propagation time            
+            Xo = Xout[0,:].reshape(6,1)
+            
+        # Propagate orbit
+        tvec = np.array([t0_obj, tf_all])
+        tout, Xout = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies)
+        
+        # Loop over times and check visibility
+        for kk in range(len(tout)):
+            
+            # Retrieve current time and state
+            tk = tout[kk]
+            Xk = Xout[kk,:].reshape(6,1)
+            
+            # Check if in desired visibility window
+            if tk < t0_all or tk > tf_all:
+                continue            
+            
+            # Loop over sensors
+            for sensor_id in sensor_id_list:
+                
+                # Retrieve sensor parameters
+                sensor_params = sensor_dict[sensor_id]
+                
+                # Check visibility
+                vis_flag = check_visibility(tk, Xk, sensor_params, bodies)
+                
+                # Store output
+                
+    
+    
+    return
 
 
 
