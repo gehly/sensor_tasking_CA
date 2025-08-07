@@ -207,6 +207,20 @@ def propagate_orbit(Xo, tvec, state_params, int_params, bodies=None):
             fixed_step_size
         )
         
+    elif int_params['tudat_integrator'] == 'rkf78':
+        initial_step_size = int_params['step']
+        maximum_step_size = int_params['max_step']
+        minimum_step_size = int_params['min_step']
+        rtol = int_params['rtol']
+        atol = int_params['atol']
+        integrator_settings = propagation_setup.integrator.runge_kutta_variable_step_size(
+            initial_step_size,
+            propagation_setup.integrator.CoefficientSets.rkf_78,
+            minimum_step_size,
+            maximum_step_size,
+            rtol,
+            atol)
+        
     elif int_params['tudat_integrator'] == 'dp7':
 
         integrator_settings = propagation_setup.integrator.runge_kutta_fixed_step_size(
@@ -451,6 +465,27 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
         integrator_settings = propagation_setup.integrator.runge_kutta_variable_step_size(
             initial_step_size,
             propagation_setup.integrator.CoefficientSets.rkf_78,
+            minimum_step_size,
+            maximum_step_size,
+            rtol,
+            atol)
+        
+    elif int_params['tudat_integrator'] == 'dp7':
+
+        integrator_settings = propagation_setup.integrator.runge_kutta_fixed_step_size(
+            initial_time_step = int_params['step'], 
+            coefficient_set = propagation_setup.integrator.CoefficientSets.rkdp_87,
+            order_to_use = propagation_setup.integrator.OrderToIntegrate.lower)
+        
+    elif int_params['tudat_integrator'] == 'dp87':
+        initial_step_size = int_params['step']
+        maximum_step_size = int_params['max_step']
+        minimum_step_size = int_params['min_step']
+        rtol = int_params['rtol']
+        atol = int_params['atol']
+        integrator_settings = propagation_setup.integrator.runge_kutta_variable_step_size(
+            initial_step_size,
+            propagation_setup.integrator.CoefficientSets.rkdp_87,
             minimum_step_size,
             maximum_step_size,
             rtol,

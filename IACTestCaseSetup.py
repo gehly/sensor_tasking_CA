@@ -555,7 +555,7 @@ def create_estimated_catalog(rso_file):
         
         kep = cart2kep(Xo_true, 3.986e14*1e9)
         period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
-        tsec = list(np.linspace(0., period, 600))
+        tsec = list(np.linspace(0., period, 100))
         tk_list = [epoch_tdb0 + sec for sec in tsec]
         
         state_dict, meas_dict, params_dict, truth_dict = \
@@ -569,6 +569,7 @@ def create_estimated_catalog(rso_file):
         print('Po', np.sqrt(np.diag(Po)))
         
         print('Xo - Xo_true', Xo - Xo_true)
+        
         
         if obj_id > 89000:
             Po *= 10000.
@@ -584,6 +585,8 @@ def create_estimated_catalog(rso_file):
         estimated_rso_dict[obj_id]['Cd'] = Cd
         estimated_rso_dict[obj_id]['Cr'] = Cr
     
+    
+    print(estimated_rso_dict)
     
     output_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     pklFile = open( output_file, 'wb' )
@@ -818,6 +821,9 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     data = pickle.load( pklFile )
     rso_dict = data[0]
     pklFile.close()
+    
+    print(rso_dict)
+    
     
     # Compute TCA
     # Basic setup parameters
@@ -1282,20 +1288,21 @@ if __name__ == '__main__':
     
     # build_truth_catalog(rso_file, 6)
     
-    # test_estimated_catalog_metrics(rso_file, 52373, 99000)
+    
     
     # define_sensors()
     
     # generate_visibility_dict(rso_file, sensor_file, visibility_file)
 
-    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-                   97000, 98000, 99000]
-    compute_visibility_stats(rso_file, visibility_file, obj_id_list)
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+    #                97000, 98000, 99000]
+    # compute_visibility_stats(rso_file, visibility_file, obj_id_list)
 
 
+    # create_estimated_catalog(rso_file)
 
-
-
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    test_estimated_catalog_metrics(estimated_rso_file, 52373, 99000, all_metrics=True)
 
 
 
