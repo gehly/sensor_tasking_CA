@@ -5,6 +5,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 import time
+import bisect
 
 # Load tudatpy modules
 from tudatpy.kernel.interface import spice_interface
@@ -33,7 +34,13 @@ import SensorTasking as sensor
 #
 ###############################################################################
 
-def generate_baseline_measurements(sensor_file, visibility_file):
+def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
     
     # Load sensor and visibility data
     pklFile = open(sensor_file, 'rb')
@@ -80,7 +87,48 @@ def generate_baseline_measurements(sensor_file, visibility_file):
                     meas_dict[obj_id]['sensor_id_list'].append(sensor_id)
                     
                 else:
+                    ind = bisect.bisect_right(meas_dict[obj_id]['tk_list'], tk)
+                    meas_dict[obj_id]['tk_list'].insert(ind, tk)
+                    meas_dict[obj_id]['Yk_list'].insert(ind, Yk)
+                    meas_dict[obj_id]['sensor_id_list'].insert(ind, sensor_id)
                     
+                    
+    
+    # Plot measurements for verification
+    for obj_id in meas_dict:
+        t0 = rso_dict[obj_id]['epoch_tdb']
+        thrs = [(tk - t0)/3600. for tk in meas_dict[obj_id]['tk_list']]
+        rg_km = [Yk[0]/1000. for Yk in meas_dict[obj_id]['Yk_list']]
+        az_deg = [np.degrees(Yk[1]) for Yk in meas_dict[obj_id]['Yk_list']]
+        el_deg = [np.degrees(Yk[2]) for Yk in meas_dict[obj_id]['Yk_list']]
+        sensor_id_list = [1]*len(meas_dict[obj_id]['sensor_id_list'])
+        for ii in range(len(meas_dict[obj_id]['sensor_id_list'])):
+            if meas_dict[obj_id]['sensor_id_list'][ii] == 'ALTAIR':
+                sensor_id_list[ii] = 2
+                
+        plt.figure()
+        plt.subplot(4,1,1)
+        plt.plot(thrs, rg_km, 'k.')
+        plt.ylabel('Range [km]')
+        plt.title('Measurements for Object ' + str(obj_id))
+        plt.subplot(4,1,2)
+        plt.plot(thrs, az_deg, 'k.')
+        plt.ylabel('Az [deg]')
+        plt.subplot(4,1,3)
+        plt.plot(thrs, el_deg, 'k.')
+        plt.ylabel('El [deg]')
+        plt.subplot(4,1,4)
+        plt.plot(thrs, sensor_id_list, 'ks')
+        plt.ylabel('Sensor')
+        plt.xlabel('Time [hours]')
+        
+        plt.figure()
+        plt.plot(list(range(len(thrs))), thrs, 'k.')
+        plt.ylabel('thrs')
+        
+        
+        
+    plt.show()
             
             
             
@@ -110,7 +158,14 @@ def process_baseline_measurements():
 
 
 
+if __name__ == '__main__':
+    
+    plt.close('all')
 
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    sensor_file = os.path.join('data', 'sensor_data.pkl')
+    visibility_file = os.path.join('data', 'visibility_data.pkl')
+    generate_baseline_measurements(rso_file, sensor_file, visibility_file)
 
 
 
