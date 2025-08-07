@@ -5,6 +5,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 import time
+import sys
 
 # Load tudatpy modules
 from tudatpy.kernel.interface import spice_interface
@@ -20,6 +21,15 @@ from tudatpy.astro.time_conversion import DateTime
 import ConjunctionUtilities as conj
 import TudatPropagator as prop
 import SensorTasking as sensor
+
+metis_dir = r'C:\Users\sgehly\Documents\code\metis'
+sys.path.append(metis_dir)
+
+import estimation.analysis_functions as analysis
+import estimation.estimation_functions as metis_est
+import dynamics.dynamics_functions as metis_dyn
+import sensors.measurement_functions as metis_mfunc
+import sensors.sensors as metis_sensors
 
 
 ###############################################################################
@@ -374,6 +384,214 @@ def create_conjunction(rso_dict, primary_id, case_id, halt_flag=False):
     
     
     return rso_dict
+
+
+
+###############################################################################
+# Create Estimated Catalog
+###############################################################################
+
+def perturb_state_vector(Xo, P):
+    
+    pert_vect = np.multiply(np.sqrt(np.diag(P)), np.random.randn(6,))
+    Xf = Xo + pert_vect.reshape(Xo.shape)
+    
+    return Xf
+
+
+def propagate_twobody_orbit(Xo, tk_list, state_params, int_params):
+    
+    # Run integrator
+    tout, Xout = metis_dyn.general_dynamics(Xo, tk_list, state_params, int_params)
+    
+    return tout, Xout
+
+
+def filter_setup(Xo, tk_list, meas_types, sigma_dict):
+    
+    # # Retrieve latest EOP data from celestrak.com
+    # eop_alldata = eop.get_celestrak_eop_alldata()
+        
+    # # Retrieve polar motion data from file
+    # XYs_df = eop.get_XYs2006_alldata()
+    
+    # Define state parameters
+    state_params = {}
+    state_params['GM'] = 3.986e14
+    
+    # Define integrator parameters
+    int_params = {}
+    int_params['integrator'] = 'solve_ivp'
+    int_params['ode_integrator'] = 'DOP853'
+    int_params['intfcn'] = metis_dyn.ode_twobody
+    
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12
+    int_params['time_format'] = 'seconds'
+    
+    # Filter parameters
+    filter_params = {}
+    filter_params['Q'] = 1e-16 * np.diag([1, 1, 1])
+    filter_params['gap_seconds'] = 900.
+    filter_params['alpha'] = 1e-4
+    filter_params['pnorm'] = 2.
+    
+    # Sensor and measurement parameters
+    sensor_id_list = ['UNSW Falcon']
+    sensor_params = metis_sensors.define_sensors(sensor_id_list)
+    # sensor_params['eop_alldata'] = eop_alldata
+    # sensor_params['XYs_df'] = XYs_df
+    
+    for sensor_id in sensor_id_list:
+        sensor_params[sensor_id]['meas_types'] = meas_types
+        sensor_params[sensor_id]['sigma_dict'] = sigma_dict
+        
+    # Propagate orbit
+    tout, X_truth = propagate_twobody_orbit(Xo, tk_list, state_params, int_params)
+        
+    truth_dict = {}
+    meas_dict = {}
+    meas_dict['tk_list'] = []
+    meas_dict['Yk_list'] = []
+    meas_dict['sensor_id_list'] = []
+    
+    for kk in range(len(tk_list)):
+        
+        # UTC = tk_list[kk]
+        epoch_tdb = tk_list[kk]
+        # EOP_data = eop.get_eop_data(eop_alldata, UTC)
+        Xk = X_truth[kk,:].reshape(6,1)
+        truth_dict[tk_list[kk]] = Xk
+        
+        for sensor_id in sensor_id_list:
+            # Yk = mfunc.compute_measurement(Xk, state_params, sensor_params,
+            #                                sensor_id, UTC, EOP_data, XYs_df)
+            
+            # Use positions as measurements
+            Yk = Xk[0:3].reshape(3,1)
+            
+            sigma_dict = sensor_params[sensor_id]['sigma_dict']
+            for mtype in meas_types:
+                ind = meas_types.index(mtype)
+                Yk[ind] += np.random.randn()*sigma_dict[mtype]
+            
+            meas_dict['tk_list'].append(epoch_tdb)
+            meas_dict['Yk_list'].append(Yk)
+            meas_dict['sensor_id_list'].append(sensor_id)
+            
+    
+    params_dict = {}
+    params_dict['state_params'] = state_params
+    params_dict['filter_params'] = filter_params
+    params_dict['int_params'] = int_params
+    params_dict['sensor_params'] = sensor_params
+    
+    # Initial state for filter
+    P = np.diag([1., 1., 1., 1e-6, 1e-6, 1e-6])
+    state_dict = {}
+    state_dict[tk_list[0]] = {}
+    state_dict[tk_list[0]]['X'] = perturb_state_vector(Xo, P)
+    state_dict[tk_list[0]]['P'] = P
+    
+    
+    return state_dict, meas_dict, params_dict, truth_dict
+
+
+def run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict):
+    
+    params_dict['int_params']['intfcn'] = metis_dyn.ode_twobody_stm
+    filter_output, full_state_output = metis_est.ls_batch(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)    
+    # analysis.compute_orbit_errors(filter_output, full_state_output, truth_dict)
+    
+    t0 = sorted(list(state_dict.keys()))[0]
+    Xo = filter_output[t0]['X']
+    Po = filter_output[t0]['P']
+    
+    return Xo, Po
+
+
+def create_estimated_catalog(rso_file):
+    
+    
+    # Load RSO dict
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    # Initialize output
+    estimated_rso_dict = {}
+    
+    # # Miss list
+    # random_obj_ids = random_object_ids()
+    # miss_list = []
+    # for ii in range(10):
+    #     miss_list.append(random_obj_ids[ii*6+3])
+    #     miss_list.append(random_obj_ids[ii*6+4])
+    #     miss_list.append(random_obj_ids[ii*6+5])
+        
+
+    # Measurement functions
+    meas_fcn = metis_mfunc.H_inertial_xyz
+    meas_types = ['x', 'y', 'z']
+    
+    # Loop over objects
+    obj_id_list = list(rso_dict.keys())
+    for obj_id in obj_id_list:
+        
+        # Retrieve object data
+        epoch_tdb0 = rso_dict[obj_id]['epoch_tdb']    
+        Xo_true = rso_dict[obj_id]['state']        
+        Cd = float(rso_dict[obj_id]['Cd'])
+        Cr = float(rso_dict[obj_id]['Cr'])
+        mass = float(rso_dict[obj_id]['mass'])
+        area = float(rso_dict[obj_id]['area'])
+           
+        # This setup yields about meter level position errors
+        sigma_dict = {}
+        sigma_dict['x'] = 100.
+        sigma_dict['y'] = 100.
+        sigma_dict['z'] = 100.    
+        
+        kep = cart2kep(Xo_true, 3.986e14*1e9)
+        period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
+        tsec = list(np.linspace(0., period, 600))
+        tk_list = [epoch_tdb0 + sec for sec in tsec]
+        
+        state_dict, meas_dict, params_dict, truth_dict = \
+            filter_setup(Xo_true, tk_list, meas_types, sigma_dict)
+        
+        Xo, Po = run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)
+        
+        print('')
+        print('obj_id', obj_id)
+        print('Xo', Xo)
+        print('Po', np.sqrt(np.diag(Po)))
+        
+        print('Xo - Xo_true', Xo - Xo_true)
+        
+        if obj_id > 89000:
+            Po *= 10000.
+        
+        
+        # Store output
+        estimated_rso_dict[obj_id] = {}
+        estimated_rso_dict[obj_id]['epoch_tdb'] = epoch_tdb0
+        estimated_rso_dict[obj_id]['state'] = Xo
+        estimated_rso_dict[obj_id]['covar'] = Po
+        estimated_rso_dict[obj_id]['mass'] = mass
+        estimated_rso_dict[obj_id]['area'] = area
+        estimated_rso_dict[obj_id]['Cd'] = Cd
+        estimated_rso_dict[obj_id]['Cr'] = Cr
+    
+    
+    output_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    pklFile = open( output_file, 'wb' )
+    pickle.dump([estimated_rso_dict], pklFile, -1)
+    pklFile.close()
+    
+    
+    return
 
 
 ###############################################################################
