@@ -597,6 +597,53 @@ def create_estimated_catalog(rso_file):
     return
 
 
+def generate_truth_data(rso_file, truth_file, tf_days, dt):
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp7'
+    int_params['step'] = dt
+    
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create) 
+    state_params = {}
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    truth_dict = {}
+    for obj_id in rso_dict:
+        
+        print('obj_id', obj_id)
+        
+        t0 = rso_dict[obj_id]['epoch_tdb']
+        Xo = rso_dict[obj_id]['state']
+        state_params['mass'] = rso_dict[obj_id]['mass']
+        state_params['area'] = rso_dict[obj_id]['area']
+        state_params['Cd'] = rso_dict[obj_id]['Cd']
+        state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+        tvec = np.array([t0, t0+tf_days*86400.])
+        tout, Xout = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies)
+    
+        truth_dict[obj_id] = {}
+        truth_dict[obj_id]['t_truth'] = tout
+        truth_dict[obj_id]['X_truth'] = Xout
+        
+    
+    pklFile = open( truth_file, 'wb' )
+    pickle.dump([truth_dict], pklFile, -1)
+    pklFile.close()    
+    
+    return
+
+
 ###############################################################################
 # Sensor Setup
 ###############################################################################
@@ -1286,9 +1333,13 @@ if __name__ == '__main__':
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     
+    
     # build_truth_catalog(rso_file, 6)
     
-    
+    truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
+    tf_days = 7.
+    dt = 10.
+    generate_truth_data(rso_file, truth_file, tf_days, dt)
     
     # define_sensors()
     
