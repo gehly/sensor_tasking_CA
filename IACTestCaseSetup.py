@@ -1301,8 +1301,8 @@ if __name__ == '__main__':
 
     # create_estimated_catalog(rso_file)
 
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
-    test_estimated_catalog_metrics(estimated_rso_file, 52373, 99000, all_metrics=True)
+    # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    # test_estimated_catalog_metrics(estimated_rso_file, 52373, 99000, all_metrics=True)
 
 
 

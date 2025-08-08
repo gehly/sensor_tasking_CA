@@ -11,6 +11,7 @@ from tudatpy.numerical_simulation import environment_setup
 
 import TudatPropagator as prop
 import ConjunctionUtilities as conj
+import SensorTasking as sensor
 
 
 ###############################################################################
@@ -116,7 +117,7 @@ def read_measurement_file(meas_file):
 ###############################################################################
 
 
-def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodies):    
+def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies):    
     '''
     This function implements the Unscented Kalman Filter for the least
     squares cost function.
@@ -145,9 +146,10 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
         fields:
             tk_list: list of times in seconds since J2000
             Yk_list: list of px1 numpy arrays containing measurement data
+            sensor_id_list: list of sensor id's corresponding to each measurement
             
-    sensor_params : dictionary
-        location, constraint, noise parameters of sensor
+    sensor_dict : dictionary
+        location, constraint, noise parameters of sensor, indexed by sensor id
         
     int_params : dictionary
         numerical integration parameters
@@ -173,9 +175,6 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
             resids: px1 numpy array, measurement residuals at tk [meters and/or radians]
         
     '''
-    
-    # TODO: measurements file needs to include sensor_id for each time
-    # then retrieve sensor_params for the correct sensor_id
         
     # Retrieve data from input parameters
     t0 = state_params['epoch_tdb']
@@ -208,6 +207,7 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
     # Measurement times
     tk_list = meas_dict['tk_list']
     Yk_list = meas_dict['Yk_list']
+    sensor_id_list = meas_dict['sensor_id_list']
     
     # Number of epochs
     N = len(tk_list)
@@ -262,6 +262,8 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
         # Measurement Update: posterior state and covar at tk       
         # Retrieve measurement data
         Yk = Yk_list[kk]
+        sensor_id = sensor_id_list[kk]
+        sensor_params = sensor_dict[sensor_id]
         
         # Computed measurements and covariance
         gamma_til_k, Rk = unscented_meas(tk, chi_bar, sensor_params, bodies)
@@ -376,7 +378,7 @@ def unscented_meas(tk, chi, sensor_params, bodies):
         
         # Rotate to ENU frame
         rho_hat_ecef = np.dot(eci2ecef, rho_hat_eci)
-        rho_hat_enu = ecef2enu(rho_hat_ecef, sensor_ecef)
+        rho_hat_enu = sensor.ecef2enu(rho_hat_ecef, sensor_ecef)
         
         if 'rg' in meas_types:
             rg_ind = meas_types.index('rg')
@@ -437,7 +439,4 @@ def unscented_meas(tk, chi, sensor_params, bodies):
 
 
     return gamma_til, Rk
-
-
-
 

@@ -21,6 +21,7 @@ from tudatpy.astro.time_conversion import DateTime
 import ConjunctionUtilities as conj
 import TudatPropagator as prop
 import SensorTasking as sensor
+import EstimationUtilities as est
 
 
 ###############################################################################
@@ -124,16 +125,9 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
         
         plt.figure()
         plt.plot(list(range(len(thrs))), thrs, 'k.')
-        plt.ylabel('thrs')
-        
-        
+        plt.ylabel('thrs')       
         
     plt.show()
-            
-            
-            
-    
-    
     
     # Save measurement data
     meas_file = os.path.join('data', 'baseline_measurement_data.pkl')
@@ -144,7 +138,78 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     return
 
 
-def process_baseline_measurements():
+def process_baseline_measurements(rso_file, sensor_file, meas_file):
+    
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    # Load sensor data
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()    
+    
+    # Load measurement data
+    pklFile = open(meas_file, 'rb')
+    data = pickle.load( pklFile )
+    meas_dict = data[0]
+    pklFile.close() 
+    
+    # Standard data
+    filter_params = {}
+    filter_params['Qeci'] = 1e-10*np.diag([1., 1., 1.])
+    filter_params['Qric'] = 0*np.diag([1., 1., 1.])
+    filter_params['alpha'] = 1.
+    filter_params['gap_seconds'] = 600.
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 1000.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12 
+    
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)   
+    state_params = {}    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    # Loop over objects
+    output_dict = {}
+    obj_id_list = list(meas_dict.keys())
+    for obj_id in obj_id_list:
+        
+        # Retrieve state parameters
+        state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
+        state_params['state'] = rso_dict[obj_id]['state']
+        state_params['covar'] = rso_dict[obj_id]['covar']
+        state_params['mass'] = rso_dict[obj_id]['mass']
+        state_params['area'] = rso_dict[obj_id]['area']
+        state_params['Cd'] = rso_dict[obj_id]['Cd']
+        state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+        # Retrieve measurement data
+        filter_meas_dict = meas_dict[obj_id]
+        
+        # Run filter
+        filter_output = est.ukf(state_params, filter_meas_dict, sensor_dict,
+                                int_params, filter_params, bodies)
+        
+        output_dict[obj_id] = filter_output
+        
+    # Save output
+    output_file = os.path.join('data', 'baseline_output.pkl')
+    pklFile = open( output_file, 'wb' )
+    pickle.dump([output_dict], pklFile, -1)
+    pklFile.close()
     
     
     return
