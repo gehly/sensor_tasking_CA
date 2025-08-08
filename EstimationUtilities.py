@@ -252,8 +252,11 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
                 
         # Add Process Noise to Pbar
         Pbar += np.dot(Gamma, np.dot(Q, Gamma.T))
+        
+        # Remediate covariance if needed
+        Pbar = conj.remediate_covariance(Pbar, 1e-12)[0]
 
-        # Recompute sigma points to incorporate process noise
+        # Recompute sigma points to incorporate process noise        
         sqP = np.linalg.cholesky(Pbar)
         Xrep = np.tile(Xbar, (1, n))
         chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
@@ -285,6 +288,7 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
         P = np.dot(P1, np.dot(Pbar, P1.T)) + P2
 
         # Recompute measurments using final state to get resids
+        P = conj.remediate_covariance(P, 1e-12)[0]
         sqP = np.linalg.cholesky(P)
         Xrep = np.tile(Xk, (1, n))
         chi_k = np.concatenate((Xk, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)        
@@ -297,6 +301,9 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
         
         print('')
         print('kk', kk)
+        print('tk', tk)
+        print('delta_t', delta_t)
+        print('Xbar', Xbar)
         print('Yk', Yk)
         print('ybar', ybar)     
         print('resids', resids)
@@ -413,21 +420,28 @@ def unscented_meas(tk, chi, sensor_params, bodies):
             
         if 'az' in meas_types:
             az = math.atan2(rho_hat_enu[0], rho_hat_enu[1])  # rad 
+            if az < 0.:
+                az += 2*np.pi
             
             # Store quadrant info of mean sigma point        
             if jj == 0:
                 quad = 0
-                if az > np.pi/2. and az < np.pi:
-                    quad = 2
-                if az < -np.pi/2. and az > -np.pi:
-                    quad = 3
+                # if az > np.pi/2. and az < np.pi:
+                #     quad = 2
+                # if az < -np.pi/2. and az > -np.pi:
+                #     quad = 3
+                
+                if az > 0. and az < np.pi/2.:
+                    quad = 1
+                if az > 3.*np.pi/2.:
+                    quad = 4
                     
             # Check and update quadrant of subsequent sigma points
             else:
-                if quad == 2 and az < 0.:
-                    az += 2.*np.pi
-                if quad == 3 and az > 0.:
+                if quad == 1 and az > 3.*np.pi/2.:
                     az -= 2.*np.pi
+                if quad == 4 and az <np.pi/2.:
+                    az += 2.*np.pi
                     
             az_ind = meas_types.index('az')
             gamma_til[az_ind,jj] = az

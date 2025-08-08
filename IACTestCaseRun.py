@@ -163,7 +163,7 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
     filter_params = {}
     filter_params['Qeci'] = 1e-10*np.diag([1., 1., 1.])
     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
-    filter_params['alpha'] = 1.
+    filter_params['alpha'] = 1e-4
     filter_params['gap_seconds'] = 600.
     
     int_params = {}
@@ -187,6 +187,9 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
     obj_id_list = list(meas_dict.keys())
     for obj_id in obj_id_list:
         
+        print('')
+        print('obj_id', obj_id)
+        
         # Retrieve state parameters
         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
         state_params['state'] = rso_dict[obj_id]['state']
@@ -204,6 +207,8 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
                                 int_params, filter_params, bodies)
         
         output_dict[obj_id] = filter_output
+        
+        break
         
     # Save output
     output_file = os.path.join('data', 'baseline_output.pkl')
@@ -227,10 +232,16 @@ if __name__ == '__main__':
     
     plt.close('all')
 
-    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    generate_baseline_measurements(rso_file, sensor_file, visibility_file)
+    meas_file = os.path.join('data', 'baseline_measurement_data.pkl')
+    
+    # generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
+    
+    
+    rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    process_baseline_measurements(rso_file, sensor_file, meas_file)
 
 
 
