@@ -22,6 +22,7 @@ import ConjunctionUtilities as conj
 import TudatPropagator as prop
 import SensorTasking as sensor
 import EstimationUtilities as est
+import AnalysisFunctions as analysis
 
 
 ###############################################################################
@@ -138,9 +139,6 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     return
 
 
-
-
-
 def process_baseline_measurements(rso_file, sensor_file, meas_file):
     
     
@@ -202,6 +200,11 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
         state_params['Cd'] = rso_dict[obj_id]['Cd']
         state_params['Cr'] = rso_dict[obj_id]['Cr']
         
+        if obj_id == 52373:
+            state_params['covar'] *= 100.
+        else:
+            state_params['covar'] *= 0.01
+        
         # Retrieve measurement data
         filter_meas_dict = meas_dict[obj_id]
         
@@ -211,13 +214,32 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
         
         output_dict[obj_id] = filter_output
         
-        break
         
     # Save output
     output_file = os.path.join('data', 'baseline_output.pkl')
     pklFile = open( output_file, 'wb' )
     pickle.dump([output_dict], pklFile, -1)
     pklFile.close()
+    
+    
+    return
+
+
+def process_baseline_filter_output(output_file, truth_file):
+    
+    pklFile = open(output_file, 'rb')
+    data = pickle.load( pklFile )
+    output_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    for obj_id in output_dict:
+        
+        analysis.compute_errors(truth_dict, output_dict, obj_id)
     
     
     return
@@ -239,14 +261,16 @@ if __name__ == '__main__':
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     meas_file = os.path.join('data', 'baseline_measurement_data.pkl')
+    truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
+    output_file = os.path.join('data', 'baseline_output.pkl')
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
     
     
-    rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
-    process_baseline_measurements(rso_file, sensor_file, meas_file)
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    # process_baseline_measurements(estimated_rso_file, sensor_file, meas_file)
 
-
+    process_baseline_filter_output(output_file, truth_file)
 
 
 
