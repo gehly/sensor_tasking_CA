@@ -192,3 +192,73 @@ def compute_errors(truth_dict, output_dict, obj_id):
     
     
     return
+
+
+def risk_metric_evolution(output_dict, rso_dict):
+    
+    # Allowable gap to still be considered the same pass
+    max_gap = 600.
+    
+    # Find times when object estimates are updated
+    for obj_id in output_dict:
+        filter_output = output_dict[obj_id]
+        tk_list = sorted(list(filter_output.keys()))
+        
+        tk_prior = tk_list[0]
+        start = tk_list[0]
+        stop = tk_list[0]
+        start_list = []
+        stop_list = []
+        for kk in range(len(tk_list)):
+            
+            tk = tk_list[kk]
+            
+            # If current time is close to previous, pass continues
+            if (tk - tk_prior) < (max_gap+1.):
+
+                # Update pass stop time and tk_prior for next iteration
+                stop = tk
+                tk_prior = tk
+                
+            # If current time is far from previous or if we reached
+            # the end of tk_list, pass has ended
+            if ((tk - tk_prior) >= (max_gap+1.) or tk == tk_list[-1]):
+                
+                # Store stop time if at end of tk_list
+                if tk == tk_list[-1]:
+                    stop = tk
+                
+                # Store output
+                start_list.append(start)
+                stop_list.append(stop)
+                
+                # Reset for new pass next round
+                start = tk
+                stop = tk
+                tk_prior = tk
+                
+        
+        # Formulated updated RSO dict
+        for tk in stop_list:
+            Xk = filter_output[tk]['state']
+            Pk = filter_output[tk]['covar']
+            
+            rso_dict[obj_id]['epoch_tdb'] = tk
+            rso_dict[obj_id]['state'] = Xk
+            rso_dict[obj_id]['covar'] = Pk
+    
+        
+    
+    
+    # Generate CDM dictionary over time
+    
+    
+    return
+
+
+
+
+
+
+
+

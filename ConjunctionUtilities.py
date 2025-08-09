@@ -396,8 +396,8 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
     # Propagate state and covariances to TCA
     t_tca = T_list[0]
     tvec = np.array([t0, t_tca])
-    tf, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
-    tf, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+    tf_1, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+    tf_2, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
     
     # Compute miss distance, Pc, Uc
     # Compute miss distance, mahalanobis distance, Pc, Uc
@@ -410,6 +410,8 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
         
     d2 = compute_euclidean_distance(r_A, r_B)
     dM = compute_mahalanobis_distance(r_A, r_B, P_A, P_B)
+    rho_eci = r_B - rA
+    rho_ric = eci2ric(r_A, v_A, rho_eci)
     vrel = np.linalg.norm(v_A - v_B)
     
     radius1 = np.sqrt(rso1_params['area']/np.pi)
@@ -419,9 +421,24 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
     Pc = Pc2D_Foster(Xf_1, Pf_1, Xf_2, Pf_2, HBR, rtol=1e-8, HBR_type='circle')
     Uc = Uc2D(Xf_1, Pf_1, Xf_2, Pf_2, HBR)
     
-    cdm_dict = create_cdm_dict()
+    cdm_data = {}
+    cdm_data['CDM_epoch'] = t0
+    cdm_data['analysis_window_days'] = (tf-t0)/86400.
+    cdm_data['TCA_epoch'] = t_tca
+    cdm_data['primary_id'] = primary_id    
+    cdm_data['primary_data'] = rso_dict[primary_id]
+    cdm_data['secondary_id'] = secondary_id
+    cdm_data['secondary_data'] = rso_dict[secondary_id]
     
-    return cdm_dict
+    cdm_data['miss_distance'] = d2
+    cdm_data['mahalanobis_distance'] = dM
+    cdm_data['RTN_miss_distances'] = rho_ric
+    cdm_data['relative_velocity'] = vrel
+    cdm_data['HBR'] = HBR
+    cdm_data['Pc2D_Foster'] = Pc
+    cdm_data['Uc2D'] = Uc
+    
+    return cdm_data
 
 
 def create_cdm_dict():
