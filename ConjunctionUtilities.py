@@ -322,8 +322,107 @@ def read_cdm_state_covar(lines):
 
 
 ###############################################################################
-# Conjunction Data Message
+# Risk Summary
 ###############################################################################
+
+
+def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
+    
+    # Retrieve data
+    t0_1 = rso_dict[primary_id]['epoch_tdb']
+    X0_1 = rso_dict[primary_id]['state']
+    P0_1 = rso_dict[primary_id]['covar']
+    
+    t0_2 = rso_dict[secondary_id]['epoch_tdb']
+    X0_2 = rso_dict[secondary_id]['state']
+    P0_2 = rso_dict[secondary_id]['covar']
+    
+    # Standard parameters
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    if bodies is None:
+        bodies = prop.tudat_initialize_bodies(bodies_to_create)       
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 1000.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12    
+    
+    rso1_params = {}    
+    rso1_params['sph_deg'] = 20
+    rso1_params['sph_ord'] = 20   
+    rso1_params['central_bodies'] = ['Earth']
+    rso1_params['bodies_to_create'] = bodies_to_create
+    rso1_params['mass'] = rso_dict[primary_id]['mass']
+    rso1_params['area'] = rso_dict[primary_id]['area']
+    rso1_params['Cd'] = rso_dict[primary_id]['Cd']
+    rso1_params['Cr'] = rso_dict[primary_id]['Cr']       
+    
+    rso2_params = {}    
+    rso2_params['sph_deg'] = 20
+    rso2_params['sph_ord'] = 20   
+    rso2_params['central_bodies'] = ['Earth']
+    rso2_params['bodies_to_create'] = bodies_to_create
+    rso2_params['mass'] = rso_dict[secondary_id]['mass']
+    rso2_params['area'] = rso_dict[secondary_id]['area']
+    rso2_params['Cd'] = rso_dict[secondary_id]['Cd']
+    rso2_params['Cr'] = rso_dict[secondary_id]['Cr']
+    
+    
+    # Compute TCA
+    # If one object has a later epoch than the other, propagate to match
+    if abs(t0_1 - t0_2) > 1e-12:
+        
+        print('Check this setup, mismatch epoch times!')
+        print(primary_id)
+        print(secondary_id)
+        print(t0_1, t0_2)
+        mistake
+        
+        if t0_1 > t0_2:
+            tvec = np.array([t0_2, t0_1])
+            dum, X0_2, P0_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+        else:
+            tvec = np.array([t0_1, t0_2])
+            dum, X0_1, P0_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+    
+    t0 = t0_1
+    trange = np.array([t0, tf])
+    T_list, rho_list = compute_TCA(X0_1, X0_2, trange, rso1_params, rso2_params,
+                                   int_params, bodies=bodies)
+    
+    # Propagate state and covariances to TCA
+    t_tca = T_list[0]
+    tvec = np.array([t0, t_tca])
+    tf, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+    tf, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+    
+    # Compute miss distance, Pc, Uc
+    # Compute miss distance, mahalanobis distance, Pc, Uc
+    r_A = Xf_1[0:3].reshape(3,1)
+    r_B = Xf_2[0:3].reshape(3,1)
+    v_A = Xf_1[3:6].reshape(3,1)
+    v_B = Xf_2[3:6].reshape(3,1)
+    P_A = Pf_1[0:3,0:3]
+    P_B = Pf_2[0:3,0:3]
+        
+    d2 = compute_euclidean_distance(r_A, r_B)
+    dM = compute_mahalanobis_distance(r_A, r_B, P_A, P_B)
+    vrel = np.linalg.norm(v_A - v_B)
+    
+    radius1 = np.sqrt(rso1_params['area']/np.pi)
+    radius2 = np.sqrt(rso2_params['area']/np.pi)
+    HBR = radius1+radius2
+    
+    Pc = Pc2D_Foster(Xf_1, Pf_1, Xf_2, Pf_2, HBR, rtol=1e-8, HBR_type='circle')
+    Uc = Uc2D(Xf_1, Pf_1, Xf_2, Pf_2, HBR)
+    
+    cdm_dict = create_cdm_dict()
+    
+    return cdm_dict
+
 
 def create_cdm_dict():
     
