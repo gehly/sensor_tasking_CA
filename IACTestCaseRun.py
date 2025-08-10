@@ -55,6 +55,22 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     visibility_dict = data[0]
     pklFile.close()    
     
+    
+    t0 = rso_dict[52373]['epoch_tdb']
+    TCA_dict = {}
+    TCA_dict[52373] = np.inf
+    TCA_dict[90000] = t0 + 30.*3600.
+    TCA_dict[91000] = t0 + 42.*3600.
+    TCA_dict[92000] = t0 + 60.*3600.
+    TCA_dict[93000] = t0 + 80.*3600.
+    TCA_dict[94000] = t0 + 97.*3600.
+    TCA_dict[95000] = t0 + 98.*3600.
+    TCA_dict[96000] = t0 + 99.*3600.
+    TCA_dict[97000] = t0 + 125.*3600.
+    TCA_dict[98000] = t0 + 145.*3600.
+    TCA_dict[99000] = t0 + 162.*3600.
+    
+    
     # Initialize output
     meas_dict = {}
     
@@ -78,6 +94,11 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
                 
             for kk in range(len(tk_list)):
                 tk = tk_list[kk]
+                
+                # Check if tk is past TCA
+                if tk > (TCA_dict[obj_id]-3600.):
+                    break                
+                
                 Yk = np.array([[rg_list[kk] + np.random.randn()*sigma_dict['rg']],
                                [az_list[kk] + np.random.randn()*sigma_dict['az']],
                                [el_list[kk] + np.random.randn()*sigma_dict['el']]])
@@ -245,8 +266,33 @@ def process_baseline_filter_output(output_file, truth_file):
     return
 
 
-def process_baseline_cdm_output():
+def process_baseline_cdm_output(rso_file, output_file):
     
+    pklFile = open(output_file, 'rb')
+    data = pickle.load( pklFile )
+    output_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+        
+    primary_id = 52373
+    t0 = rso_dict[primary_id]['epoch_tdb']
+    tf = t0 + 7.*86400.
+    
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)
+    
+    cdm_dict = analysis.risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies)
+    
+    
+    # Save output
+    cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+    pklFile = open( cdm_file, 'wb' )
+    pickle.dump([cdm_dict], pklFile, -1)
+    pklFile.close()
     
     return
 
@@ -263,21 +309,24 @@ if __name__ == '__main__':
     
     plt.close('all')
 
-    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     meas_file = os.path.join('data', 'baseline_measurement_data.pkl')
     truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
     output_file = os.path.join('data', 'baseline_output.pkl')
-    
-    # generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
-    
-    
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    
+    generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
+    
+    
+    
     # process_baseline_measurements(estimated_rso_file, sensor_file, meas_file)
 
-    process_baseline_filter_output(output_file, truth_file)
-
+    # process_baseline_filter_output(output_file, truth_file)
+    
+    
+    # process_baseline_cdm_output(estimated_rso_file, output_file)
 
 
 

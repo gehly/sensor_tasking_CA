@@ -571,8 +571,11 @@ def create_estimated_catalog(rso_file):
         print('Xo - Xo_true', Xo - Xo_true)
         
         
-        if obj_id > 89000:
-            Po *= 10000.
+        # if obj_id > 89000:
+        #     Po *= 10000.
+        
+        # Update all objects to be ~10 meter position std
+        Po *= 100.
         
         
         # Store output
@@ -1003,7 +1006,7 @@ def generate_visibility_dict(rso_file, sensor_file, visibility_file):
     # Setup tvec and integration parameters
     obj_id = list(rso_dict.keys())[0]
     t0 = rso_dict[obj_id]['epoch_tdb']
-    tf = t0 + 86400.
+    tf = t0 + 7.*86400.
     tvec = np.array([t0, tf])
     
     int_params = {}
@@ -1339,7 +1342,7 @@ if __name__ == '__main__':
     truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
     tf_days = 7.
     dt = 10.
-    generate_truth_data(rso_file, truth_file, tf_days, dt)
+    # generate_truth_data(rso_file, truth_file, tf_days, dt)
     
     # define_sensors()
     

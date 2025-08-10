@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import bisect
+import os
+import pickle
+import math
 
 import ConjunctionUtilities as conj
 import TudatPropagator as prop
@@ -261,10 +264,26 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
                 tk_prior = tk
                 
                 
-    # Create CDM dictionary over time
-    # Loop over stop times and compute CDMs using latest RSO estimates
+    print(stop_list_all)
+    print(obj_id_list_all)
+    print(len(obj_id_list_all))
+
+              
+    # Create initial baseline CDM dictionary
+    # Process all risk metrics for the given RSO data, before any measurements
+    # are collected
     cdm_dict = {}
-    cdm_id = 0
+    cdm_id = 0    
+    for secondary_id in secondary_id_list:
+        cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
+                                                     secondary_id, tf,
+                                                     bodies)                
+        cdm_id += 1  
+    
+
+                
+    # Create CDM dictionary over time
+    # Loop over stop times and compute CDMs using latest RSO estimates    
     for kk in range(len(stop_list_all)):
         
         # Retrieve object data
@@ -273,11 +292,17 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
         Xk = output_dict[obj_id][tk]['state']
         Pk = output_dict[obj_id][tk]['covar']
         
+        print('')
+        print(obj_id)
+        print('prior Pk', np.sqrt(np.diag(rso_dict[obj_id]['covar'])))
+        print('post Pk', np.sqrt(np.diag(Pk)))
+        
         # Update RSO dict
         rso_dict[obj_id]['epoch_tdb'] = tk
         rso_dict[obj_id]['state'] = Xk
         rso_dict[obj_id]['covar'] = Pk
         
+                
         # Compute CDM data
         if obj_id == primary_id:
             
@@ -293,8 +318,18 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
                                                          obj_id, tf, bodies)
             
             cdm_id += 1
+            
+        if math.fmod(cdm_id, 10) == 0:
+            
+            print('cdm_id', cdm_id)
+            cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+            pklFile = open( cdm_file, 'wb' )
+            pickle.dump([cdm_dict], pklFile, -1)
+            pklFile.close()
         
     
+    
+    print(cdm_dict)
     
     return cdm_dict
 
