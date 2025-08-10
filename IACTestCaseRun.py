@@ -245,6 +245,12 @@ def process_baseline_filter_output(output_file, truth_file):
     return
 
 
+def process_baseline_cdm_output():
+    
+    
+    return
+
+
 # have a function that generates a CDM following each measurement update and
 # maintain a dictionary of CDMs that can be easily looked up to see if an 
 # object is included - to be used for prioritization (dynamically updated CDM

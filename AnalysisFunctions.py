@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import bisect
 
 import ConjunctionUtilities as conj
+import TudatPropagator as prop
 
 
 def compute_errors(truth_dict, output_dict, obj_id):
@@ -194,12 +196,24 @@ def compute_errors(truth_dict, output_dict, obj_id):
     return
 
 
-def risk_metric_evolution(output_dict, rso_dict):
+def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
+    
+    if bodies is None:
+        bodies_to_create = ['Sun', 'Earth', 'Moon']
+        bodies = prop.tudat_initialize_bodies(bodies_to_create)
+        
+    # Secondary object id's
+    secondary_id_list = sorted(list(rso_dict.keys()))
+    del_ind = secondary_id_list.index(primary_id)
+    del secondary_id_list[del_ind]
     
     # Allowable gap to still be considered the same pass
     max_gap = 600.
     
     # Find times when object estimates are updated
+    obs_dict = {}
+    stop_list_all = []
+    obj_id_list_all = []
     for obj_id in output_dict:
         filter_output = output_dict[obj_id]
         tk_list = sorted(list(filter_output.keys()))
@@ -232,28 +246,57 @@ def risk_metric_evolution(output_dict, rso_dict):
                 start_list.append(start)
                 stop_list.append(stop)
                 
+                if len(stop_list_all) == 0:
+                    stop_list_all.append(stop)
+                    obj_id_list_all.append(obj_id)
+                    
+                else:                
+                    ind = bisect.bisect_right(stop_list_all, stop)
+                    stop_list_all.insert(ind, stop)
+                    obj_id_list_all.insert(ind, obj_id)
+                
                 # Reset for new pass next round
                 start = tk
                 stop = tk
                 tk_prior = tk
                 
+                
+    # Create CDM dictionary over time
+    # Loop over stop times and compute CDMs using latest RSO estimates
+    cdm_dict = {}
+    cdm_id = 0
+    for kk in range(len(stop_list_all)):
         
-        # Formulated updated RSO dict
-        for tk in stop_list:
-            Xk = filter_output[tk]['state']
-            Pk = filter_output[tk]['covar']
+        # Retrieve object data
+        tk = stop_list_all[kk]
+        obj_id = obj_id_list_all[kk]
+        Xk = output_dict[obj_id][tk]['state']
+        Pk = output_dict[obj_id][tk]['covar']
+        
+        # Update RSO dict
+        rso_dict[obj_id]['epoch_tdb'] = tk
+        rso_dict[obj_id]['state'] = Xk
+        rso_dict[obj_id]['covar'] = Pk
+        
+        # Compute CDM data
+        if obj_id == primary_id:
             
-            rso_dict[obj_id]['epoch_tdb'] = tk
-            rso_dict[obj_id]['state'] = Xk
-            rso_dict[obj_id]['covar'] = Pk
-    
+            # Loop over all secondaries and recompute
+            for secondary_id in secondary_id_list:
+                cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
+                                                             secondary_id, tf,
+                                                             bodies)                
+                cdm_id += 1            
+            
+        else:
+            cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
+                                                         obj_id, tf, bodies)
+            
+            cdm_id += 1
         
     
     
-    # Generate CDM dictionary over time
-    
-    
-    return
+    return cdm_dict
 
 
 

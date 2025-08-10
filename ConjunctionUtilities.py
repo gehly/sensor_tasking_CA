@@ -410,9 +410,9 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
         
     d2 = compute_euclidean_distance(r_A, r_B)
     dM = compute_mahalanobis_distance(r_A, r_B, P_A, P_B)
-    rho_eci = r_B - rA
+    rho_eci = r_B - r_A
     rho_ric = eci2ric(r_A, v_A, rho_eci)
-    vrel = np.linalg.norm(v_A - v_B)
+    vrel = np.linalg.norm(v_B - v_A)
     
     radius1 = np.sqrt(rso1_params['area']/np.pi)
     radius2 = np.sqrt(rso2_params['area']/np.pi)
