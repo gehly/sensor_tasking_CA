@@ -555,7 +555,10 @@ def create_estimated_catalog(rso_file):
         
         kep = cart2kep(Xo_true, 3.986e14*1e9)
         period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
-        tsec = list(np.linspace(0., period, 100))
+        tsec = list(np.linspace(0., 0.1*period, 20))
+        
+        print(tsec)
+        
         tk_list = [epoch_tdb0 + sec for sec in tsec]
         
         state_dict, meas_dict, params_dict, truth_dict = \
@@ -571,11 +574,17 @@ def create_estimated_catalog(rso_file):
         print('Xo - Xo_true', Xo - Xo_true)
         
         
-        # if obj_id > 89000:
-        #     Po *= 10000.
+        if obj_id > 89000:
+            Po *= 1000.
+            # Xo = perturb_state_vector(Xo_true, Po)
+            
+        else:
+            Po *= 100.
         
-        # Update all objects to be ~10 meter position std
-        Po *= 100.
+        
+        
+        
+        
         
         
         # Store output
@@ -1353,7 +1362,7 @@ if __name__ == '__main__':
     # compute_visibility_stats(rso_file, visibility_file, obj_id_list)
 
 
-    # create_estimated_catalog(rso_file)
+    create_estimated_catalog(rso_file)
 
     # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     # test_estimated_catalog_metrics(estimated_rso_file, 52373, 99000, all_metrics=True)

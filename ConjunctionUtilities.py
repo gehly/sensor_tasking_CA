@@ -326,7 +326,7 @@ def read_cdm_state_covar(lines):
 ###############################################################################
 
 
-def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
+def compute_risk_metrics(rso_dict, primary_id, secondary_id, TCA_true, bodies=None):
     
     # Retrieve data
     t0_1 = rso_dict[primary_id]['epoch_tdb']
@@ -381,22 +381,32 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
     rso2_params['Cr'] = rso_dict[secondary_id]['Cr']
     
     
-    # Compute TCA
-    # Object states are defined at same epoch
-    if abs(t0_1 - t0_2) < 1e-12:
-        t0 = t0_1
+    # # Compute TCA
+    # # Object states are defined at same epoch
+    # if abs(t0_1 - t0_2) < 1e-12:
+    #     t0 = t0_1
         
-    # If one object has a later epoch than the other, propagate to match
-    else:                
-        if t0_1 > t0_2:
-            print('prop secondary to t1')
-            tvec = np.array([t0_2, t0_1])
-            t0, X0_2, P0_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
-        else:
-            print('prop primary to t2')
-            tvec = np.array([t0_1, t0_2])
-            t0, X0_1, P0_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+    # # If one object has a later epoch than the other, propagate to match
+    # else:                
+    #     if t0_1 > t0_2:
+    #         print('prop secondary to t1')
+    #         tvec = np.array([t0_2, t0_1])
+    #         t0, X0_2, P0_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+    #     else:
+    #         print('prop primary to t2')
+    #         tvec = np.array([t0_1, t0_2])
+    #         t0, X0_1, P0_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
     
+    
+    # Compute TCA
+    # Narrow range of times to consider and propagate both objects to time just 
+    # before TCA
+    t0 = TCA_true - 1000.
+    tf = TCA_true + 1000.
+    tvec1 = np.array([t0_1, t0])
+    tvec2 = np.array([t0_2, t0])
+    dum, X0_1, P0_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec1, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+    dum, X0_2, P0_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec2, rso2_params, int_params, bodies=bodies, alpha=1e-4)
 
     print('t0', t0)
     print('X0_1', X0_1)
@@ -404,8 +414,7 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
     print('P0_1', np.sqrt(np.diag(P0_1)))
     print('P0_2', np.sqrt(np.diag(P0_2)))
     
-    
-    
+    # trange = np.array([t0, tf])
     trange = np.array([t0, tf])
     T_list, rho_list = compute_TCA(X0_1, X0_2, trange, rso1_params, rso2_params,
                                    int_params, bodies=bodies)
@@ -413,6 +422,9 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
     # Propagate state and covariances to TCA
     t_tca = T_list[0]
     tvec = np.array([t0, t_tca])
+    
+    # tvec1 = np.array([t0_1, TCA])
+    # tvec2 = np.array([t0_2, TCA])
     tf_1, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
     tf_2, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
     
@@ -439,8 +451,8 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, tf, bodies=None):
     Uc = Uc2D(Xf_1, Pf_1, Xf_2, Pf_2, HBR)
     
     cdm_data = {}
-    cdm_data['CDM_epoch'] = t0
-    cdm_data['analysis_window_days'] = (tf-t0)/86400.
+    cdm_data['CDM_epoch'] = max([t0_1, t0_2])
+    # cdm_data['analysis_window_days'] = (tf-t0)/86400.
     cdm_data['TCA_epoch'] = t_tca
     cdm_data['primary_id'] = primary_id    
     cdm_data['primary_data'] = rso_dict[primary_id]

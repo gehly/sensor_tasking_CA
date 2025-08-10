@@ -288,18 +288,17 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
     cdm_dict = {}
     cdm_id = 0    
     for secondary_id in secondary_id_list:
+        TCA = TCA_dict[secondary_id]
         cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
-                                                     secondary_id, tf,
+                                                     secondary_id, tf, TCA,
                                                      bodies)                
         cdm_id += 1  
-    
-    
-    print('cdm_id', cdm_id)
-    print(cdm_dict)
-    cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
-    pklFile = open( cdm_file, 'wb' )
-    pickle.dump([cdm_dict], pklFile, -1)
-    pklFile.close()
+        
+
+        cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+        pklFile = open( cdm_file, 'wb' )
+        pickle.dump([cdm_dict], pklFile, -1)
+        pklFile.close()
                 
     # Create CDM dictionary over time
     # Loop over stop times and compute CDMs using latest RSO estimates    
@@ -329,17 +328,19 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
             for secondary_id in secondary_id_list:
                 
                 # Skip this object if past TCA
-                if tk > (TCA_dict[secondary_id]-3600.):
+                TCA = TCA_dict[secondary_id]
+                if tk > (TCA-3600.):
                     continue
                 
                 cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
                                                              secondary_id, tf,
-                                                             bodies)                
+                                                             TCA, bodies)                
                 cdm_id += 1            
             
         else:
+            TCA = TCA_dict[obj_id]
             cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
-                                                         obj_id, tf, bodies)
+                                                         obj_id, tf, TCA, bodies)
             
             cdm_id += 1
             
@@ -358,9 +359,24 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
     return cdm_dict
 
 
+def plot_cdm_data(cdm_file):
+    
+    pklFile = open(cdm_file, 'rb')
+    data = pickle.load( pklFile )
+    cdm_dict = data[0]
+    pklFile.close()
+    
+    print(cdm_dict)
+    
+    
+    return
 
 
-
-
+if __name__ == '__main__':
+    
+    plt.close('all')
+    
+    cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+    plot_cdm_data(cdm_file)
 
 
