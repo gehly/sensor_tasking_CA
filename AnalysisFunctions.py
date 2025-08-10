@@ -210,6 +210,19 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
     del_ind = secondary_id_list.index(primary_id)
     del secondary_id_list[del_ind]
     
+    t0 = rso_dict[52373]['epoch_tdb']
+    TCA_dict = {}
+    TCA_dict[90000] = t0 + 30.*3600.
+    TCA_dict[91000] = t0 + 42.*3600.
+    TCA_dict[92000] = t0 + 60.*3600.
+    TCA_dict[93000] = t0 + 80.*3600.
+    TCA_dict[94000] = t0 + 97.*3600.
+    TCA_dict[95000] = t0 + 98.*3600.
+    TCA_dict[96000] = t0 + 99.*3600.
+    TCA_dict[97000] = t0 + 125.*3600.
+    TCA_dict[98000] = t0 + 145.*3600.
+    TCA_dict[99000] = t0 + 162.*3600.
+    
     # Allowable gap to still be considered the same pass
     max_gap = 600.
     
@@ -280,7 +293,13 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
                                                      bodies)                
         cdm_id += 1  
     
-
+    
+    print('cdm_id', cdm_id)
+    print(cdm_dict)
+    cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+    pklFile = open( cdm_file, 'wb' )
+    pickle.dump([cdm_dict], pklFile, -1)
+    pklFile.close()
                 
     # Create CDM dictionary over time
     # Loop over stop times and compute CDMs using latest RSO estimates    
@@ -308,6 +327,11 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
             
             # Loop over all secondaries and recompute
             for secondary_id in secondary_id_list:
+                
+                # Skip this object if past TCA
+                if tk > (TCA_dict[secondary_id]-3600.):
+                    continue
+                
                 cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
                                                              secondary_id, tf,
                                                              bodies)                

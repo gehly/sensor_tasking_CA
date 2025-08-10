@@ -221,10 +221,10 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
         state_params['Cd'] = rso_dict[obj_id]['Cd']
         state_params['Cr'] = rso_dict[obj_id]['Cr']
         
-        if obj_id == 52373:
-            state_params['covar'] *= 100.
-        else:
-            state_params['covar'] *= 0.01
+        # if obj_id == 52373:
+        #     state_params['covar'] *= 100.
+        # else:
+        #     state_params['covar'] *= 0.01
         
         # Retrieve measurement data
         filter_meas_dict = meas_dict[obj_id]
@@ -317,13 +317,13 @@ if __name__ == '__main__':
     output_file = os.path.join('data', 'baseline_output.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     
-    generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
+    # generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
     
     
     
     # process_baseline_measurements(estimated_rso_file, sensor_file, meas_file)
 
-    # process_baseline_filter_output(output_file, truth_file)
+    process_baseline_filter_output(output_file, truth_file)
     
     
     # process_baseline_cdm_output(estimated_rso_file, output_file)
