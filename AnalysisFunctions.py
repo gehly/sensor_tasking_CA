@@ -290,7 +290,7 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
     for secondary_id in secondary_id_list:
         TCA = TCA_dict[secondary_id]
         cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
-                                                     secondary_id, tf, TCA,
+                                                     secondary_id, TCA,
                                                      bodies)                
         cdm_id += 1  
         
@@ -333,24 +333,23 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
                     continue
                 
                 cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
-                                                             secondary_id, tf,
+                                                             secondary_id, 
                                                              TCA, bodies)                
                 cdm_id += 1            
             
         else:
             TCA = TCA_dict[obj_id]
             cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
-                                                         obj_id, tf, TCA, bodies)
+                                                         obj_id, TCA, bodies)
             
             cdm_id += 1
             
-        if math.fmod(cdm_id, 10) == 0:
+        # if math.fmod(cdm_id, 10) == 0:
             
-            print('cdm_id', cdm_id)
-            cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
-            pklFile = open( cdm_file, 'wb' )
-            pickle.dump([cdm_dict], pklFile, -1)
-            pklFile.close()
+        cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+        pklFile = open( cdm_file, 'wb' )
+        pickle.dump([cdm_dict], pklFile, -1)
+        pklFile.close()
         
     
     
@@ -359,14 +358,103 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
     return cdm_dict
 
 
-def plot_cdm_data(cdm_file):
+def plot_cdm_data(cdm_file, rso_file):
     
     pklFile = open(cdm_file, 'rb')
     data = pickle.load( pklFile )
     cdm_dict = data[0]
     pklFile.close()
     
-    print(cdm_dict)
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    t0 = rso_dict[52373]['epoch_tdb']
+    
+    plot_dict = {}
+    secondary_id_list = []
+    for cdm_id in cdm_dict:
+        
+        cdm_data = cdm_dict[cdm_id]
+        
+        CDM_epoch = cdm_data['CDM_epoch']
+        TCA_epoch = cdm_data['TCA_epoch']
+        primary_id = cdm_data['primary_id']
+        primary_data = cdm_data['primary_data']
+        secondary_id = cdm_data['secondary_id']
+        secondary_data = cdm_data['secondary_data']
+        
+        miss_distance = cdm_data['miss_distance']
+        mahalanobis_distance = cdm_data['mahalanobis_distance']
+        RTN_miss_distance = cdm_data['RTN_miss_distances']
+        relative_velocity = cdm_data['relative_velocity']
+        HBR = cdm_data['HBR']
+        Pc = cdm_data['Pc2D_Foster'] 
+        Uc = cdm_data['Uc2D'] 
+        
+        if secondary_id not in plot_dict:
+            plot_dict[secondary_id] = {}
+            plot_dict[secondary_id]['thrs'] = []
+            plot_dict[secondary_id]['miss_distance'] = []
+            plot_dict[secondary_id]['Pc'] = []
+            plot_dict[secondary_id]['Uc'] = []
+            
+        plot_dict[secondary_id]['thrs'].append((CDM_epoch-t0)/3600.)
+        plot_dict[secondary_id]['miss_distance'].append(miss_distance)
+        plot_dict[secondary_id]['Pc'].append(Pc)
+        plot_dict[secondary_id]['Uc'].append(Uc)
+            
+         
+            
+    secondary_id_list = sorted(list(plot_dict.keys()))
+    
+    # Plot miss distance    
+    colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(secondary_id_list)+1))
+    plt.figure()
+    ii = 0
+    for secondary_id in plot_dict:
+        thrs = plot_dict[secondary_id]['thrs']
+        miss_distance = plot_dict[secondary_id]['miss_distance']
+        plt.semilogy(thrs, miss_distance, 'o--', color=colors[ii], label=str(secondary_id))
+        ii += 1
+        
+    plt.ylabel('Miss Distance [m]')
+    plt.xlabel('Time [hours]')
+    plt.legend()
+    
+    # Plot Pc
+    plt.figure()
+    ii = 0
+    for secondary_id in plot_dict:
+        thrs = plot_dict[secondary_id]['thrs']
+        Pc = plot_dict[secondary_id]['Pc']
+        plt.semilogy(thrs, Pc, 'o--', color=colors[ii], label=str(secondary_id))
+        ii += 1
+        
+    plt.ylabel('Pc')
+    plt.xlabel('Time [hours]')
+    plt.legend()
+    
+    # Plot Uc
+    plt.figure()
+    ii = 0
+    for secondary_id in plot_dict:
+        thrs = plot_dict[secondary_id]['thrs']
+        Uc = plot_dict[secondary_id]['Uc']
+        plt.semilogy(thrs, Uc, 'o--', color=colors[ii], label=str(secondary_id))
+        ii += 1
+        
+    plt.ylabel('Uc')
+    plt.xlabel('Time [hours]')
+    plt.legend()
+    
+    
+    
+    
+    
+    
+    plt.show()
     
     
     return
@@ -377,6 +465,7 @@ if __name__ == '__main__':
     plt.close('all')
     
     cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
-    plot_cdm_data(cdm_file)
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    plot_cdm_data(cdm_file, rso_file)
 
 

@@ -893,7 +893,7 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     int_params = {}
     int_params['tudat_integrator'] = 'dp87'
     int_params['step'] = 10.
-    int_params['max_step'] = 1000.
+    int_params['max_step'] = 60.
     int_params['min_step'] = 1e-3
     int_params['rtol'] = 1e-12
     int_params['atol'] = 1e-12    
@@ -920,7 +920,7 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     rso2_params['Cr'] = rso_dict[secondary_id]['Cr']
     
     t0 = rso_dict[primary_id]['epoch_tdb']
-    tf = t0 + 7.*86400.
+    tf = t0 + 2.*86400.
     trange = np.array([t0, tf])
     
     X1_0 = rso_dict[primary_id]['state']    
@@ -1362,10 +1362,10 @@ if __name__ == '__main__':
     # compute_visibility_stats(rso_file, visibility_file, obj_id_list)
 
 
-    create_estimated_catalog(rso_file)
+    # create_estimated_catalog(rso_file)
 
-    # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
-    # test_estimated_catalog_metrics(estimated_rso_file, 52373, 99000, all_metrics=True)
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
 
 
 

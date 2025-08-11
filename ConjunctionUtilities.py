@@ -352,13 +352,17 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, TCA_true, bodies=No
     if bodies is None:
         bodies = prop.tudat_initialize_bodies(bodies_to_create)       
     
-    int_params = {}
-    int_params['tudat_integrator'] = 'dp87'
-    int_params['step'] = 10.
-    int_params['max_step'] = 1000.
-    int_params['min_step'] = 1e-3
-    int_params['rtol'] = 1e-12
-    int_params['atol'] = 1e-12    
+    int_params_var = {}
+    int_params_var['tudat_integrator'] = 'dp87'
+    int_params_var['step'] = 10.
+    int_params_var['max_step'] = 60.
+    int_params_var['min_step'] = 1e-3
+    int_params_var['rtol'] = 1e-12
+    int_params_var['atol'] = 1e-12    
+    
+    int_params_fix = {}
+    int_params_fix['tudat_integrator'] = 'dp7'
+    int_params_fix['step'] = 4.
     
     rso1_params = {}    
     rso1_params['sph_deg'] = 20
@@ -405,28 +409,38 @@ def compute_risk_metrics(rso_dict, primary_id, secondary_id, TCA_true, bodies=No
     tf = TCA_true + 1000.
     tvec1 = np.array([t0_1, t0])
     tvec2 = np.array([t0_2, t0])
-    dum, X0_1, P0_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec1, rso1_params, int_params, bodies=bodies, alpha=1e-4)
-    dum, X0_2, P0_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec2, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+    # dum, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec1, rso1_params, int_params, bodies=bodies, alpha=1e-4)
+    # dum, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec2, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+    tout, Xout = prop.propagate_orbit(X0_1, tvec1, rso1_params, int_params_var, bodies)
+    Xf_1 = Xout[-1,:].reshape(6,1)
+    tout, Xout = prop.propagate_orbit(X0_2, tvec2, rso2_params, int_params_var, bodies)
+    Xf_2 = Xout[-1,:].reshape(6,1)
+
 
     print('t0', t0)
-    print('X0_1', X0_1)
-    print('X0_2', X0_2)
-    print('P0_1', np.sqrt(np.diag(P0_1)))
-    print('P0_2', np.sqrt(np.diag(P0_2)))
+    print('Xf_1', Xf_1)
+    print('Xf_2', Xf_2)
+    # print('Pf_1', np.sqrt(np.diag(Pf_1)))
+    # print('Pf_2', np.sqrt(np.diag(Pf_2)))
     
     # trange = np.array([t0, tf])
     trange = np.array([t0, tf])
-    T_list, rho_list = compute_TCA(X0_1, X0_2, trange, rso1_params, rso2_params,
-                                   int_params, bodies=bodies)
+    T_list, rho_list = compute_TCA(Xf_1, Xf_2, trange, rso1_params, rso2_params,
+                                   int_params_var, bodies=bodies)
     
     # Propagate state and covariances to TCA
     t_tca = T_list[0]
-    tvec = np.array([t0, t_tca])
+    # tvec = np.array([t0, t_tca])
     
-    # tvec1 = np.array([t0_1, TCA])
-    # tvec2 = np.array([t0_2, TCA])
-    tf_1, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec, rso1_params, int_params, bodies=bodies, alpha=1e-4)
-    tf_2, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec, rso2_params, int_params, bodies=bodies, alpha=1e-4)
+    tvec1 = np.array([t0_1, t_tca])
+    tvec2 = np.array([t0_2, t_tca])
+    
+    # Ensure covariance matrices are positive definite
+    # P0_1 = remediate_covariance(P0_1, 1e-12)[0]
+    # P0_2 = remediate_covariance(P0_2, 1e-12)[0]
+    
+    tf_1, Xf_1, Pf_1 = prop.propagate_state_and_covar(X0_1, P0_1, tvec1, rso1_params, int_params_var, bodies=bodies, alpha=1e-4)
+    tf_2, Xf_2, Pf_2 = prop.propagate_state_and_covar(X0_2, P0_2, tvec2, rso2_params, int_params_var, bodies=bodies, alpha=1e-4)
     
     # Compute miss distance, Pc, Uc
     # Compute miss distance, mahalanobis distance, Pc, Uc
