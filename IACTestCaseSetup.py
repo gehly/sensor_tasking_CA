@@ -386,6 +386,89 @@ def create_conjunction(rso_dict, primary_id, case_id, halt_flag=False):
     return rso_dict
 
 
+###############################################################################
+# Create Tertiaries
+###############################################################################
+
+def create_tertiary_object(Xo_secondary):
+    
+    # Uncertainties for perturbation
+    sig_sma = 0.
+    sig_ecc = 1e-4
+    sig_inc = 1.
+    sig_RAAN = 1.
+    sig_AOP = 1.
+    sig_TA = 1.
+    
+    # Convert secondary state to orbit elements
+    elem = cart2kep(Xo_secondary, 3.986e14)
+    print('secondary elem', elem)
+        
+    # Perturb orbit elements
+    elem[0] += sig_sma*np.random.randn()    
+    pert_ecc = sig_ecc*np.random.randn()
+    while elem[1] - pert_ecc < 0:
+        pert_ecc = sig_ecc*np.random.randn()
+    elem[1] += pert_ecc
+    elem[2] += sig_inc*np.random.randn()
+    elem[3] += sig_RAAN*np.random.randn()
+    elem[4] += sig_AOP*np.random.randn()
+    elem[5] += sig_TA*np.random.randn()
+    
+    # Convert to Cartesian state
+    Xo_tertiary = kep2cart(elem, 3.986e14)
+    
+    print('tertiary elem', elem)
+    print('cart diff', Xo_tertiary - Xo_secondary)
+    
+    return Xo_tertiary
+
+
+def create_tertiary_catalog(rso_file):
+    
+    # Load true RSO dict
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                         97000, 98000, 99000]
+    
+    for secondary_id in secondary_id_list:
+        
+        t0_secondary = rso_dict[secondary_id]['epoch_tdb']
+        Xo_secondary = rso_dict[secondary_id]['state']
+        
+        for ii in range(1,11):
+            
+            tertiary_id = secondary_id + ii
+            Xo_tertiary = create_tertiary_object(Xo_secondary)
+            mass = np.random.rand()*999.+1.
+            A_m = np.random.rand()*0.09 + 0.01
+            area = A_m*mass
+            Cd = 2.2
+            Cr = 1.3
+            
+            # Add to output
+            rso_dict[tertiary_id] = {}
+            rso_dict[tertiary_id]['epoch_tdb'] = t0_secondary
+            rso_dict[tertiary_id]['state'] = Xo_tertiary
+            rso_dict[tertiary_id]['mass'] = mass
+            rso_dict[tertiary_id]['area'] = area
+            rso_dict[tertiary_id]['Cd'] = Cd
+            rso_dict[tertiary_id]['Cr'] = Cr
+    
+    
+    print(list(rso_dict.keys()))
+    print(len(rso_dict))
+    
+    pklFile = open(rso_file, 'wb')
+    pickle.dump([rso_dict], pklFile, -1)
+    pklFile.close()
+    
+    return
+
 
 ###############################################################################
 # Create Estimated Catalog
@@ -553,7 +636,7 @@ def create_estimated_catalog(rso_file):
         sigma_dict['y'] = 100.
         sigma_dict['z'] = 100.    
         
-        kep = cart2kep(Xo_true, 3.986e14*1e9)
+        kep = cart2kep(Xo_true, 3.986e14)
         period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
         tsec = list(np.linspace(0., 0.1*period, 20))
         
@@ -1331,6 +1414,86 @@ def cart2kep(cart, GM):
     return elem
 
 
+def kep2cart(elem, GM):
+    '''
+    This function converts a vector of Keplerian orbital elements to a
+    Cartesian state vector in inertial frame.
+    
+    Parameters
+    ------
+    elem : 6x1 numpy array
+    
+    Keplerian Orbital Elements
+    ------
+    elem[0] : a
+      Semi-Major Axis             [km]
+    elem[1] : e
+      Eccentricity                [unitless]
+    elem[2] : i
+      Inclination                 [deg]
+    elem[3] : RAAN
+      Right Asc Ascending Node    [deg]
+    elem[4] : w
+      Argument of Periapsis       [deg]
+    elem[5] : theta
+      True Anomaly                [deg]
+      
+      
+    Returns
+    ------
+    cart : 6x1 numpy array
+    
+    Cartesian Coordinates (Inertial Frame)
+    ------
+    cart[0] : x
+      Position in x               [km]
+    cart[1] : y
+      Position in y               [km]
+    cart[2] : z
+      Position in z               [km]
+    cart[3] : dx
+      Velocity in x               [km/s]
+    cart[4] : dy
+      Velocity in y               [km/s]
+    cart[5] : dz
+      Velocity in z               [km/s]  
+      
+    '''
+    
+    # Retrieve input elements, convert to radians
+    a = float(elem[0,0])
+    e = float(elem[1,0])
+    i = float(elem[2,0]) * math.pi/180
+    RAAN = float(elem[3,0]) * math.pi/180
+    w = float(elem[4,0]) * math.pi/180
+    theta = float(elem[5,0]) * math.pi/180
+
+    # Calculate h and r
+    p = a*(1 - e**2)
+    h = np.sqrt(GM*p)
+    r = p/(1. + e*math.cos(theta))
+
+    # Calculate r_vect and v_vect
+    r_vect = r * \
+        np.array([[math.cos(RAAN)*math.cos(theta+w) - math.sin(RAAN)*math.sin(theta+w)*math.cos(i)],
+                  [math.sin(RAAN)*math.cos(theta+w) + math.cos(RAAN)*math.sin(theta+w)*math.cos(i)],
+                  [math.sin(theta+w)*math.sin(i)]])
+
+    vv1 = math.cos(RAAN)*(math.sin(theta+w) + e*math.sin(w)) + \
+          math.sin(RAAN)*(math.cos(theta+w) + e*math.cos(w))*math.cos(i)
+
+    vv2 = math.sin(RAAN)*(math.sin(theta+w) + e*math.sin(w)) - \
+          math.cos(RAAN)*(math.cos(theta+w) + e*math.cos(w))*math.cos(i)
+
+    vv3 = -(math.cos(theta+w) + e*math.cos(w))*math.sin(i)
+    
+    v_vect = -GM/h * np.array([[vv1], [vv2], [vv3]])
+
+    cart = np.concatenate((r_vect, v_vect), axis=0)
+    
+    return cart
+
+
 if __name__ == '__main__':
     
     plt.close('all')
@@ -1348,6 +1511,9 @@ if __name__ == '__main__':
     
     # build_truth_catalog(rso_file, 6)
     
+    create_tertiary_catalog(rso_file)
+    
+    
     truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
     tf_days = 7.
     dt = 10.
@@ -1364,8 +1530,8 @@ if __name__ == '__main__':
 
     # create_estimated_catalog(rso_file)
 
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
-    test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
+    # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    # test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
 
 
 
