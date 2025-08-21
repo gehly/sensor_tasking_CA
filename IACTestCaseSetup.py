@@ -396,10 +396,10 @@ def create_tertiary_object(Xo_secondary):
     # Uncertainties for perturbation
     sig_sma = 0.
     sig_ecc = 1e-4
-    sig_inc = 1.
-    sig_RAAN = 1.
-    sig_AOP = 1.
-    sig_TA = 1.
+    sig_inc = 3.
+    sig_RAAN = 3.
+    sig_AOP = 3.
+    sig_TA = 5.
     
     # Convert secondary state to orbit elements
     elem = cart2kep(Xo_secondary, 3.986e14)
@@ -433,32 +433,60 @@ def create_tertiary_catalog(rso_file):
     rso_dict = data[0]
     pklFile.close()
     
-    secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000,
-                         97000, 98000, 99000]
+    # secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000,
+    #                      97000, 98000, 99000]
     
-    for secondary_id in secondary_id_list:
+    # for secondary_id in secondary_id_list:
+        
+    #     t0_secondary = rso_dict[secondary_id]['epoch_tdb']
+    #     Xo_secondary = rso_dict[secondary_id]['state']
+        
+    #     for ii in range(1,11):
+            
+    #         tertiary_id = secondary_id + ii
+    #         Xo_tertiary = create_tertiary_object(Xo_secondary)
+    #         mass = np.random.rand()*999.+1.
+    #         A_m = np.random.rand()*0.09 + 0.01
+    #         area = A_m*mass
+    #         Cd = 2.2
+    #         Cr = 1.3
+            
+    #         # Add to output
+    #         rso_dict[tertiary_id] = {}
+    #         rso_dict[tertiary_id]['epoch_tdb'] = t0_secondary
+    #         rso_dict[tertiary_id]['state'] = Xo_tertiary
+    #         rso_dict[tertiary_id]['mass'] = mass
+    #         rso_dict[tertiary_id]['area'] = area
+    #         rso_dict[tertiary_id]['Cd'] = Cd
+    #         rso_dict[tertiary_id]['Cr'] = Cr
+    
+    
+    tertiary_id_list = [92009]
+    
+    for tertiary_id in tertiary_id_list:
+        
+        secondary_id = int(np.floor(tertiary_id/10.)*10)
+        print(secondary_id)
         
         t0_secondary = rso_dict[secondary_id]['epoch_tdb']
         Xo_secondary = rso_dict[secondary_id]['state']
         
-        for ii in range(1,11):
-            
-            tertiary_id = secondary_id + ii
-            Xo_tertiary = create_tertiary_object(Xo_secondary)
-            mass = np.random.rand()*999.+1.
-            A_m = np.random.rand()*0.09 + 0.01
-            area = A_m*mass
-            Cd = 2.2
-            Cr = 1.3
-            
-            # Add to output
-            rso_dict[tertiary_id] = {}
-            rso_dict[tertiary_id]['epoch_tdb'] = t0_secondary
-            rso_dict[tertiary_id]['state'] = Xo_tertiary
-            rso_dict[tertiary_id]['mass'] = mass
-            rso_dict[tertiary_id]['area'] = area
-            rso_dict[tertiary_id]['Cd'] = Cd
-            rso_dict[tertiary_id]['Cr'] = Cr
+        Xo_tertiary = create_tertiary_object(Xo_secondary)
+        mass = np.random.rand()*999.+1.
+        A_m = np.random.rand()*0.09 + 0.01
+        area = A_m*mass
+        Cd = 2.2
+        Cr = 1.3
+        
+        # Add to output
+        rso_dict[tertiary_id] = {}
+        rso_dict[tertiary_id]['epoch_tdb'] = t0_secondary
+        rso_dict[tertiary_id]['state'] = Xo_tertiary
+        rso_dict[tertiary_id]['mass'] = mass
+        rso_dict[tertiary_id]['area'] = area
+        rso_dict[tertiary_id]['Cd'] = Cd
+        rso_dict[tertiary_id]['Cr'] = Cr
+        
     
     
     print(list(rso_dict.keys()))
@@ -769,7 +797,7 @@ def define_sensors():
     meas_types = ['rg', 'az', 'el']
     sigma_dict = {}
     sigma_dict['rg'] = 10.                  # m
-    # sigma_dict['rr'] = 5.                   # m/s
+    # sigma_dict['rr'] = 0.01                   # m/s
     sigma_dict['az'] = np.radians(0.01)     # rad
     sigma_dict['el'] = np.radians(0.01)    # rad
     
@@ -966,7 +994,6 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id, tf_days,
     rso_dict = data[0]
     pklFile.close()
     
-    print(rso_dict)
     
     
     # Compute TCA
@@ -1115,7 +1142,8 @@ def generate_true_risk_metrics(rso_file, metrics_file, tf_days):
     rso_dict = data[0]
     pklFile.close()
     
-    obj_id_list = sorted(list(rso_dict.keys()))
+    # obj_id_list = sorted(list(rso_dict.keys()))
+    obj_id_list = [52373, 92009]
     
     with open(metrics_file, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
@@ -1127,7 +1155,9 @@ def generate_true_risk_metrics(rso_file, metrics_file, tf_days):
     
         primary_id = obj_id_list[0]
         
-        for secondary_id in obj_id_list[1:]:        
+        for secondary_id in obj_id_list[1:]: 
+            
+            print('secondary id', secondary_id)
         
             TCA_hrs, d2, rho_ric, vrel = \
                 test_estimated_catalog_metrics(rso_file, primary_id, secondary_id, tf_days,
@@ -1577,7 +1607,7 @@ if __name__ == '__main__':
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    metrics_file = os.path.join('data', 'risk_metrics_truth.csv')
+    metrics_file = os.path.join('data', 'risk_metrics_truth5.csv')
     
     
     # build_truth_catalog(rso_file, 6)
