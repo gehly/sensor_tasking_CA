@@ -438,6 +438,8 @@ def compute_visible_passes2(truth_dict, sensor_dict, bodies):
     visibility_dict = {}
     for obj_id in obj_id_list:
         
+        print(obj_id)
+        
         # Retrieve object true states and times
         tout = truth_dict[obj_id]['t_truth']
         Xout = truth_dict[obj_id]['X_truth']

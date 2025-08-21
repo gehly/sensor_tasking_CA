@@ -4,3 +4,5 @@
 data/test_data.csv
 
 data/train_data.csv
+
+data/propagated_truth_10sec.pkl
