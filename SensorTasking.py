@@ -408,6 +408,79 @@ def compute_visible_passes(tvec, rso_dict, sensor_dict, int_params, bodies=None)
     return visibility_dict
 
 
+def compute_visible_passes2(truth_dict, sensor_dict, bodies):
+    '''
+    This function computes visible passes for a given object catalog and 
+    sensors.
+    
+    Parameters
+    ------
+    tvec : 1D numpy array
+        initial and final time of visibility window seconds since J2000 TDB
+    rso_dict : dictionary
+        object state parameters including pos/vel in ECI [m] and physical 
+        attributes
+    sensor_dict : dictionary
+        sensor parameters including location in ECEF [m] and constraints
+        
+    Returns
+    ------    
+    
+    
+    '''
+    
+    # Retrieve input data
+    obj_id_list = sorted(list(truth_dict.keys()))
+    sensor_id_list = sorted(list(sensor_dict.keys()))
+    
+    
+    # Loop over objects
+    visibility_dict = {}
+    for obj_id in obj_id_list:
+        
+        # Retrieve object true states and times
+        tout = truth_dict[obj_id]['t_truth']
+        Xout = truth_dict[obj_id]['X_truth']
+        
+        # Loop over times and check visibility
+        for kk in range(len(tout)):
+            
+            # Retrieve current time and state
+            tk = tout[kk]
+            Xk = Xout[kk,:].reshape(6,1)     
+            
+            # Loop over sensors
+            for sensor_id in sensor_id_list:
+                
+                # Retrieve sensor parameters
+                sensor_params = sensor_dict[sensor_id]
+                
+                # Check visibility
+                vis_flag, rg, az, el = check_visibility(tk, Xk, sensor_params,
+                                                        bodies)
+                
+                # Store output
+                if vis_flag:
+                    
+                    if sensor_id not in visibility_dict:
+                        visibility_dict[sensor_id] = {}
+                        
+                    if obj_id not in visibility_dict[sensor_id]:
+                        visibility_dict[sensor_id][obj_id] = {}
+                        visibility_dict[sensor_id][obj_id]['tk_list'] = []
+                        visibility_dict[sensor_id][obj_id]['rg_list'] = []
+                        visibility_dict[sensor_id][obj_id]['el_list'] = []
+                        visibility_dict[sensor_id][obj_id]['az_list'] = []
+                        
+                    visibility_dict[sensor_id][obj_id]['tk_list'].append(tk)
+                    visibility_dict[sensor_id][obj_id]['rg_list'].append(rg)
+                    visibility_dict[sensor_id][obj_id]['az_list'].append(az)
+                    visibility_dict[sensor_id][obj_id]['el_list'].append(el)
+                    
+    
+    return visibility_dict
+
+
 def compute_pass(tk_list, rg_list, az_list, el_list):
     
     # Allowable gap to still be considered the same pass

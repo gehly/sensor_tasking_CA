@@ -1177,12 +1177,12 @@ def generate_true_risk_metrics(rso_file, metrics_file, tf_days):
     return
 
 
-def generate_visibility_dict(rso_file, sensor_file, visibility_file):
+def generate_visibility_dict(truth_file, sensor_file, visibility_file):
     
     # Load objects and sensors
-    pklFile = open(rso_file, 'rb' )
+    pklFile = open(truth_file, 'rb' )
     data = pickle.load( pklFile )
-    rso_dict = data[0]
+    truth_dict = data[0]
     pklFile.close()
     
     pklFile = open(sensor_file, 'rb' )
@@ -1190,24 +1190,12 @@ def generate_visibility_dict(rso_file, sensor_file, visibility_file):
     sensor_dict = data[0]
     pklFile.close()
     
-    # Setup dynamics parameters
     bodies_to_create = ['Sun', 'Earth', 'Moon']
-    bodies = prop.tudat_initialize_bodies(bodies_to_create) 
-    
-    # Setup tvec and integration parameters
-    obj_id = list(rso_dict.keys())[0]
-    t0 = rso_dict[obj_id]['epoch_tdb']
-    tf = t0 + 7.*86400.
-    tvec = np.array([t0, tf])
-    
-    int_params = {}
-    int_params['tudat_integrator'] = 'dp7'
-    int_params['step'] = 10.
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)  
     
     
-    visibility_dict = sensor.compute_visible_passes(tvec, rso_dict,
-                                                    sensor_dict, int_params,
-                                                    bodies)
+    visibility_dict = sensor.compute_visible_passes2(truth_dict, sensor_dict,
+                                                     bodies)
     
     
     print(visibility_dict)
@@ -1615,17 +1603,17 @@ if __name__ == '__main__':
     # create_tertiary_catalog(rso_file)
     
     tf_days = 7.
-    generate_true_risk_metrics(rso_file, metrics_file, tf_days)
+    # generate_true_risk_metrics(rso_file, metrics_file, tf_days)
     
     
-    truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
+    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     tf_days = 7.
     dt = 10.
     # generate_truth_data(rso_file, truth_file, tf_days, dt)
     
     # define_sensors()
     
-    # generate_visibility_dict(rso_file, sensor_file, visibility_file)
+    generate_visibility_dict(truth_file, sensor_file, visibility_file)
 
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
     #                97000, 98000, 99000]
