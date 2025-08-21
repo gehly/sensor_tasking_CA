@@ -6,6 +6,7 @@ import pickle
 import matplotlib.pyplot as plt
 import time
 import sys
+import csv
 
 # Load tudatpy modules
 from tudatpy.kernel.interface import spice_interface
@@ -407,7 +408,7 @@ def create_tertiary_object(Xo_secondary):
     # Perturb orbit elements
     elem[0] += sig_sma*np.random.randn()    
     pert_ecc = sig_ecc*np.random.randn()
-    while elem[1] - pert_ecc < 0:
+    while elem[1] + pert_ecc < 0:
         pert_ecc = sig_ecc*np.random.randn()
     elem[1] += pert_ecc
     elem[2] += sig_inc*np.random.randn()
@@ -593,7 +594,7 @@ def run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict):
     return Xo, Po
 
 
-def create_estimated_catalog(rso_file):
+def create_estimated_catalog(rso_file, output_file):
     
     
     # Load RSO dict
@@ -638,7 +639,7 @@ def create_estimated_catalog(rso_file):
         
         kep = cart2kep(Xo_true, 3.986e14)
         period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
-        tsec = list(np.linspace(0., 0.1*period, 20))
+        tsec = list(np.linspace(0., period, 20))
         
         print(tsec)
         
@@ -655,6 +656,8 @@ def create_estimated_catalog(rso_file):
         print('Po', np.sqrt(np.diag(Po)))
         
         print('Xo - Xo_true', Xo - Xo_true)
+        
+        mistake
         
         
         if obj_id > 89000:
@@ -683,7 +686,6 @@ def create_estimated_catalog(rso_file):
     
     print(estimated_rso_dict)
     
-    output_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     pklFile = open( output_file, 'wb' )
     pickle.dump([estimated_rso_dict], pklFile, -1)
     pklFile.close()
@@ -954,7 +956,7 @@ def verify_numerical_error():
     return
 
 
-def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
+def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id, tf_days,
                                    all_metrics=False):
     
     
@@ -1003,7 +1005,7 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     rso2_params['Cr'] = rso_dict[secondary_id]['Cr']
     
     t0 = rso_dict[primary_id]['epoch_tdb']
-    tf = t0 + 2.*86400.
+    tf = t0 + tf_days*86400.
     trange = np.array([t0, tf])
     
     X1_0 = rso_dict[primary_id]['state']    
@@ -1012,12 +1014,13 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
     
     
     T_list, rho_list = conj.compute_TCA(X1_0, X2_0, trange, rso1_params,
-                                        rso2_params, int_params, bodies=bodies, 
-                                        rho_min_crit=2000.)
+                                        rso2_params, int_params, bodies=bodies)
     
     print('')
     print('TCA_hrs', [(ti - t0)/3600. for ti in T_list])
     print(rho_list)
+    
+    TCA_hrs = (T_list[0]-t0)/3600.
     
     
     if all_metrics:
@@ -1046,6 +1049,8 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
         
         d2 = conj.compute_euclidean_distance(r_A, r_B)
         dM = conj.compute_mahalanobis_distance(r_A, r_B, P_A, P_B)
+        rho_eci = r_B - r_A
+        rho_ric = conj.eci2ric(r_A, v_A, rho_eci)
         vrel = np.linalg.norm(v_A - v_B)
         
         radius1 = np.sqrt(rso1_params['area']/np.pi)
@@ -1066,12 +1071,76 @@ def test_estimated_catalog_metrics(rso_file, primary_id, secondary_id,
         print('P2', np.sqrt(np.diag(P2_f)))
         
         print('')
-        print('TCA [hrs]', (T_list[0]-t0)/3600.)
+        print('TCA [hrs]', TCA_hrs)
         print('miss distance', d2)
         print('mahalanobis distance', dM)
         print('relative velocity', vrel)
         print('Pc', Pc)
         print('Uc', Uc)
+        
+        
+        return TCA_hrs, d2, dM, rho_ric, vrel, Pc, Uc
+    
+    # Propagate state to TCA
+    t_tca = T_list[0]
+    tvec = np.array([t0, t_tca])
+    tout1, Xout1 = prop.propagate_orbit(X1_0, tvec, rso1_params, int_params, bodies=bodies)
+    tout2, Xout2 = prop.propagate_orbit(X2_0, tvec, rso2_params, int_params, bodies=bodies)
+    
+    X1_f = Xout1[-1,:].reshape(6,1)
+    X2_f = Xout2[-1,:].reshape(6,1)
+        
+    
+    # Compute miss distance, mahalanobis distance, Pc, Uc
+    r_A = X1_f[0:3].reshape(3,1)
+    r_B = X2_f[0:3].reshape(3,1)
+    v_A = X1_f[3:6].reshape(3,1)
+    v_B = X2_f[3:6].reshape(3,1)
+
+    
+    d2 = conj.compute_euclidean_distance(r_A, r_B)
+    rho_eci = r_B - r_A
+    rho_ric = conj.eci2ric(r_A, v_A, rho_eci)
+    vrel = np.linalg.norm(v_A - v_B)
+    
+    
+    return TCA_hrs, d2, rho_ric, vrel
+
+
+def generate_true_risk_metrics(rso_file, metrics_file, tf_days):
+    
+    
+    pklFile = open(rso_file, 'rb' )
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    obj_id_list = sorted(list(rso_dict.keys()))
+    
+    with open(metrics_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['Primary ID','Secondary ID', 'TCA [hours]', 
+                         'Miss Distance [m]', 'Radial [m]',
+                         'Tangential [m]', 'Normal [m]',
+                         'Relative Velocity [m/s]'])
+    
+    
+        primary_id = obj_id_list[0]
+        
+        for secondary_id in obj_id_list[1:]:        
+        
+            TCA_hrs, d2, rho_ric, vrel = \
+                test_estimated_catalog_metrics(rso_file, primary_id, secondary_id, tf_days,
+                                               all_metrics=False)
+                
+            rdist = float(rho_ric[0,0])
+            tdist = float(rho_ric[1,0])
+            ndist = float(rho_ric[2,0])
+            
+            writer.writerow([primary_id, secondary_id, TCA_hrs, d2, rdist, tdist,
+                             ndist, vrel])
+            
+    csvfile.close()
     
     
     
@@ -1505,13 +1574,18 @@ if __name__ == '__main__':
     # verify_numerical_error()
     
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
+    metrics_file = os.path.join('data', 'risk_metrics_truth.csv')
     
     
     # build_truth_catalog(rso_file, 6)
     
-    create_tertiary_catalog(rso_file)
+    # create_tertiary_catalog(rso_file)
+    
+    tf_days = 7.
+    generate_true_risk_metrics(rso_file, metrics_file, tf_days)
     
     
     truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
@@ -1528,12 +1602,12 @@ if __name__ == '__main__':
     # compute_visibility_stats(rso_file, visibility_file, obj_id_list)
 
 
-    # create_estimated_catalog(rso_file)
+    # create_estimated_catalog(rso_file, estimated_rso_file)
 
-    # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    # 
     # test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
 
-
+    
 
 
 
