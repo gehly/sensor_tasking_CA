@@ -8,6 +8,7 @@ import time
 import sys
 import csv
 import bisect
+import pandas as pd
 
 # Load tudatpy modules
 from tudatpy.kernel.interface import spice_interface
@@ -1325,7 +1326,52 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days):
     return
 
 
-
+def plot_true_miss_distances(input_csv):
+    
+    # Load data
+    df = pd.read_csv(input_csv)
+    
+    # Retrieve secondary ID and miss distance
+    obj_id_list = df['Secondary ID'].tolist()
+    miss_distance_list = df['Miss Distance [m]'].tolist()
+    
+    # miss_km = [miss/1000. for miss in miss_distance_list]
+    
+    secondary_id_list = []
+    tertiary_id_list = []
+    secondary_miss = []
+    tertiary_miss = []
+    for ii in range(len(obj_id_list)):
+        obj_id = obj_id_list[ii]        
+        if math.fmod(obj_id, 1000) == 0:
+            secondary_id_list.append(obj_id)
+            secondary_miss.append(miss_distance_list[ii])
+        else:
+            tertiary_id_list.append(obj_id)
+            tertiary_miss.append(miss_distance_list[ii])
+    
+    plt.figure()
+    plt.semilogy(secondary_id_list, secondary_miss, 'k.')
+    plt.semilogy(tertiary_id_list, tertiary_miss, 'b.')
+    plt.semilogy([0, 100000], [5000, 5000], 'r--')
+    plt.xlim([89500, 99500])
+    plt.xticks([90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000],
+               rotation=90)
+    plt.xlabel('Object ID')
+    plt.ylabel('Minimum Miss Distance [m]')
+    
+    plt.figure()
+    plt.semilogx(secondary_miss, secondary_id_list, 'k.')
+    plt.semilogx(tertiary_miss, tertiary_id_list, 'b.')
+    plt.semilogx([5000, 5000], [0, 100000], 'r--')
+    plt.ylim([89500, 99500])
+    plt.yticks([90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000])
+    plt.ylabel('Object ID')
+    plt.xlabel('Minimum Miss Distance [m]')
+    
+    plt.show()
+    
+    return
 
 ###############################################################################
 # Utilities
@@ -1623,7 +1669,7 @@ if __name__ == '__main__':
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    metrics_file = os.path.join('data', 'risk_metrics_truth5.csv')
+    metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
     
     
     # build_truth_catalog(rso_file, 6)
@@ -1646,7 +1692,7 @@ if __name__ == '__main__':
     tf_days = 1.
     obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
                    97000, 98000, 99000]
-    compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
+    # compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
 
 
     # create_estimated_catalog(rso_file, estimated_rso_file)
@@ -1655,7 +1701,7 @@ if __name__ == '__main__':
     # test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
 
     
-
+    plot_true_miss_distances(metrics_file)
 
 
 
