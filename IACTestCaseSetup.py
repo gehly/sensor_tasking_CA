@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import time
 import sys
 import csv
+import bisect
 
 # Load tudatpy modules
 from tudatpy.kernel.interface import spice_interface
@@ -1209,7 +1210,7 @@ def generate_visibility_dict(truth_file, sensor_file, visibility_file):
     return
 
 
-def compute_visibility_stats(rso_file, visibility_file, obj_id_list):
+def compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days):
     
     
     pklFile = open(rso_file, 'rb' )
@@ -1236,11 +1237,14 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list):
             if obj_id not in visibility_dict[sensor_id]:
                 print('\nSensor', sensor_id, 'has no visibile passes for', obj_id)
                 continue
+                        
             
-            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
-            rg_list = visibility_dict[sensor_id][obj_id]['rg_list']
-            az_list = visibility_dict[sensor_id][obj_id]['az_list']
-            el_list = visibility_dict[sensor_id][obj_id]['el_list']
+            
+            ind = bisect.bisect_right(visibility_dict[sensor_id][obj_id]['tk_list'], t0 + tf_days*86400.)
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list'][:ind]
+            rg_list = visibility_dict[sensor_id][obj_id]['rg_list'][:ind]
+            az_list = visibility_dict[sensor_id][obj_id]['az_list'][:ind]
+            el_list = visibility_dict[sensor_id][obj_id]['el_list'][:ind]
             
             pass_dict = sensor.compute_pass(tk_list, rg_list, az_list, el_list)
             start_list = pass_dict['start_list']
@@ -1291,6 +1295,30 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list):
         ax.set_title('Visibility from ' + sensor_id)
         
             
+        
+    # Compute number of objects visible at each time
+    tvec = list(np.arange(t0, t0+tf_days*86400.+1., 10.))
+    thrs = [(tk-t0)/3600. for tk in tvec]
+    # colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(visibility_dict)+1))
+    colors = ['r', 'b', 'g', 'k']
+    cind = 0
+    plt.figure()
+    for sensor_id in visibility_dict:
+        
+        nvis_object = np.zeros(len(tvec),)
+        for obj_id in visibility_dict[sensor_id]:
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+            
+            ind_list = [tvec.index(tk) for tk in tk_list]
+            nvis_object[ind_list] += 1
+        
+        plt.plot(thrs, nvis_object, '.', color=colors[cind], label=sensor_id)
+        cind += 1
+                
+            
+    plt.xlabel('Time [hours]')    
+    plt.ylabel('Number of Visible Objects')
+    plt.legend()
             
     plt.show()
     
@@ -1613,11 +1641,12 @@ if __name__ == '__main__':
     
     # define_sensors()
     
-    generate_visibility_dict(truth_file, sensor_file, visibility_file)
+    # generate_visibility_dict(truth_file, sensor_file, visibility_file)
 
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-    #                97000, 98000, 99000]
-    # compute_visibility_stats(rso_file, visibility_file, obj_id_list)
+    tf_days = 1.
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                   97000, 98000, 99000]
+    compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
 
 
     # create_estimated_catalog(rso_file, estimated_rso_file)
