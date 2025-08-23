@@ -36,7 +36,8 @@ import AnalysisFunctions as analysis
 #
 ###############################################################################
 
-def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
+def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
+                                   truth_file, meas_file):
     
     # Load rso data
     pklFile = open(rso_file, 'rb')
@@ -55,6 +56,17 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     visibility_dict = data[0]
     pklFile.close()    
     
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    body_settings = environment_setup.get_default_body_settings(
+        ["Earth"],
+        "Earth",
+        "J2000")
+    bodies = environment_setup.create_system_of_bodies(body_settings)
+    
     
     t0 = rso_dict[52373]['epoch_tdb']
     TCA_dict = {}
@@ -70,6 +82,11 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     TCA_dict[98000] = t0 + 145.*3600.
     TCA_dict[99000] = t0 + 162.*3600.
     
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+    #                97000, 98000, 99000]
+    
+    obj_id_list = [52373]
+    
     
     # Initialize output
     meas_dict = {}
@@ -77,10 +94,12 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     # Parse visibility dict, add noise to measurements and store
     for sensor_id in visibility_dict:
         
+        sensor_params = sensor_dict[sensor_id]
         meas_types = sensor_dict[sensor_id]['meas_types']
         sigma_dict = sensor_dict[sensor_id]['sigma_dict']
         
-        for obj_id in visibility_dict[sensor_id]:
+        # for obj_id in visibility_dict[sensor_id]:
+        for obj_id in obj_id_list:
             tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
             rg_list = visibility_dict[sensor_id][obj_id]['rg_list']
             az_list = visibility_dict[sensor_id][obj_id]['az_list']
@@ -97,11 +116,27 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
                 
                 # Check if tk is past TCA
                 if tk > (TCA_dict[obj_id]-3600.):
-                    break                
+                    break   
                 
-                Yk = np.array([[rg_list[kk] + np.random.randn()*sigma_dict['rg']],
-                               [az_list[kk] + np.random.randn()*sigma_dict['az']],
-                               [el_list[kk] + np.random.randn()*sigma_dict['el']]])
+                # Retrieve object state at this time
+                tk_truth = truth_dict[obj_id]['t_truth']
+                Xk_truth = truth_dict[obj_id]['X_truth']
+                ind = list(tk_truth).index(tk)
+                Xk = Xk_truth[ind,:].reshape(6,1)
+                
+                # Compute measurement and add noise
+                Yk = sensor.compute_measurement(tk, Xk, sensor_params, bodies)
+                
+                # Add noise
+                for ii in range(len(meas_types)):
+                    meas = meas_types[ii]
+                    Yk[ii] += np.random.randn()*sigma_dict[meas]
+                
+                
+                
+                # Yk = np.array([[rg_list[kk] + np.random.randn()*sigma_dict['rg']],
+                #                [az_list[kk] + np.random.randn()*sigma_dict['az']],
+                #                [el_list[kk] + np.random.randn()*sigma_dict['el']]])
                 
                 # Store in correct time order
                 if len(meas_dict[obj_id]['tk_list']) == 0:
@@ -152,7 +187,6 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     plt.show()
     
     # Save measurement data
-    meas_file = os.path.join('data', 'baseline_measurement_data.pkl')
     pklFile = open( meas_file, 'wb' )
     pickle.dump([meas_dict], pklFile, -1)
     pklFile.close()
@@ -160,7 +194,7 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file):
     return
 
 
-def process_baseline_measurements(rso_file, sensor_file, meas_file):
+def process_baseline_measurements(rso_file, sensor_file, meas_file, output_file):
     
     
     # Load rso data
@@ -237,7 +271,6 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file):
         
         
     # Save output
-    output_file = os.path.join('data', 'baseline_output.pkl')
     pklFile = open( output_file, 'wb' )
     pickle.dump([output_dict], pklFile, -1)
     pklFile.close()
@@ -310,23 +343,25 @@ if __name__ == '__main__':
     plt.close('all')
 
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    sensor_file = os.path.join('data', 'sensor_data.pkl')
+    sensor_file = os.path.join('data', 'sensor_data_rgradec_lownoise.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    meas_file = os.path.join('data', 'baseline_measurement_data.pkl')
-    truth_file = os.path.join('data', 'baseline_truth_10sec.pkl')
-    output_file = os.path.join('data', 'baseline_output.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
-    
-    # generate_baseline_measurements(rso_file, sensor_file, visibility_file)    
+    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise.pkl')
+    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    output_file = os.path.join('data', 'baseline_output_batchPo_rgradec_lownoise.pkl')
     
     
+    # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
+    #                                truth_file, meas_file)    
     
-    # process_baseline_measurements(estimated_rso_file, sensor_file, meas_file)
+    
+    
+    process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
     # process_baseline_filter_output(output_file, truth_file)
     
     
-    process_baseline_cdm_output(estimated_rso_file, output_file)
+    # process_baseline_cdm_output(estimated_rso_file, output_file)
 
 
 

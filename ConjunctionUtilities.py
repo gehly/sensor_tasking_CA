@@ -692,6 +692,11 @@ def remediate_covariance(Praw, Lclip, Lraw=[], Vraw=[]):
         Prem = np.dot(Vraw, np.dot(np.diag(Lrem), Vraw.T))
     else:
         Prem = Praw.copy()
+        
+    if not posdef_status:
+        print('covariance remediated')
+        print('original eigenvalues', Lraw)
+        print('post eigenvalues', np.linalg.eig(Prem)[0])
     
     
     return Prem, Pdet, Pinv, posdef_status, clip_status

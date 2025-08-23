@@ -34,6 +34,7 @@ import dynamics.dynamics_functions as metis_dyn
 import sensors.measurement_functions as metis_mfunc
 import sensors.sensors as metis_sensors
 
+arcsec2rad = np.pi/(3600.*180.)
 
 ###############################################################################
 # Setup Primary Object
@@ -664,8 +665,8 @@ def create_estimated_catalog(rso_file, output_file):
         #######################################################################
         # Simple Diagonal Covariance
         #######################################################################
-        Po = np.diag([1e6, 1e6, 1e6, 1, 1, 1])
-        Xo = perturb_state_vector(Xo_true, Po)
+        # Po = np.diag([1e6, 1e6, 1e6, 1, 1, 1])
+        # Xo = perturb_state_vector(Xo_true, Po)
         
         
         #######################################################################
@@ -673,33 +674,35 @@ def create_estimated_catalog(rso_file, output_file):
         #######################################################################
         
            
-        # # This setup yields about meter level position errors
-        # sigma_dict = {}
-        # sigma_dict['x'] = 100.
-        # sigma_dict['y'] = 100.
-        # sigma_dict['z'] = 100.    
+        # This setup yields about meter level position errors
+        sigma_dict = {}
+        sigma_dict['x'] = 100.
+        sigma_dict['y'] = 100.
+        sigma_dict['z'] = 100.    
         
-        # kep = cart2kep(Xo_true, 3.986e14)
-        # period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
-        # tsec = list(np.linspace(0., period, 20))
+        kep = cart2kep(Xo_true, 3.986e14)
+        period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
+        tsec = list(np.linspace(0., period, 20))
         
-        # print(tsec)
+        print(tsec)
         
-        # tk_list = [epoch_tdb0 + sec for sec in tsec]
+        tk_list = [epoch_tdb0 + sec for sec in tsec]
         
         
         
-        # state_dict, meas_dict, params_dict, truth_dict = \
-        #     filter_setup(Xo_true, tk_list, meas_types, sigma_dict)
+        state_dict, meas_dict, params_dict, truth_dict = \
+            filter_setup(Xo_true, tk_list, meas_types, sigma_dict)
         
-        # Xo, Po = run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)
+        Xo, Po = run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)
         
         # if obj_id > 89000:
         #     Po *= 1000.
-        #     # Xo = perturb_state_vector(Xo_true, Po)
+            # Xo = perturb_state_vector(Xo_true, Po)
             
         # else:
         #     Po *= 100.
+        
+        # Po *= 1000.
         
         
         print('')
@@ -708,13 +711,6 @@ def create_estimated_catalog(rso_file, output_file):
         print('Po', np.sqrt(np.diag(Po)))
         
         print('Xo - Xo_true', Xo - Xo_true)
-        
-        
-        
-        
-        
-        
-        
         
         
         
@@ -791,7 +787,7 @@ def generate_truth_data(rso_file, truth_file, tf_days, dt):
 # Sensor Setup
 ###############################################################################
 
-def define_sensors():
+def define_sensors(sensor_file):
     
     sensor_dict = {}
     
@@ -812,12 +808,19 @@ def define_sensors():
     
     # Measurement types and noise
     # Approximated from Cerruti-Maori (SDC8)
+    # meas_types = ['rg', 'az', 'el']
+    # sigma_dict = {}
+    # sigma_dict['rg'] = 10.                  # m
+    # sigma_dict['rr'] = 0.01                   # m/s
+    # sigma_dict['az'] = np.radians(0.01)     # rad
+    # sigma_dict['el'] = np.radians(0.01)    # rad
+    
     meas_types = ['rg', 'az', 'el']
     sigma_dict = {}
-    sigma_dict['rg'] = 10.                  # m
-    # sigma_dict['rr'] = 0.01                   # m/s
-    sigma_dict['az'] = np.radians(0.01)     # rad
-    sigma_dict['el'] = np.radians(0.01)    # rad
+    sigma_dict['rg'] = 1.
+    sigma_dict['az'] = 5.*arcsec2rad
+    sigma_dict['el'] = 5.*arcsec2rad
+    
     
     
     sensor_dict['TIRA'] = \
@@ -846,11 +849,11 @@ def define_sensors():
     
     # Measurement types and noise
     # Range from Abouzahra, angles approximated from Vallado
-    meas_types = ['rg', 'az', 'el']
-    sigma_dict = {}
-    sigma_dict['rg'] = 10.0   # 13.5 (Abouzahra)                  # m
-    sigma_dict['az'] = np.radians(0.01)     # 0.03 (Vallado) # rad
-    sigma_dict['el'] = np.radians(0.01)    # rad
+    # meas_types = ['rg', 'az', 'el']
+    # sigma_dict = {}
+    # sigma_dict['rg'] = 10.0   # 13.5 (Abouzahra)                  # m
+    # sigma_dict['az'] = np.radians(0.01)     # 0.03 (Vallado) # rad
+    # sigma_dict['el'] = np.radians(0.01)    # rad
     
     
     sensor_dict['ALTAIR'] = \
@@ -861,7 +864,6 @@ def define_sensors():
         
     print(sensor_dict)
     
-    sensor_file = os.path.join('data', 'sensor_data.pkl')
     pklFile = open( sensor_file, 'wb' )
     pickle.dump([sensor_dict], pklFile, -1)
     pklFile.close()
@@ -1684,8 +1686,8 @@ if __name__ == '__main__':
     # verify_numerical_error()
     
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
-    sensor_file = os.path.join('data', 'sensor_data.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    sensor_file = os.path.join('data', 'sensor_data_rgazel_lownoise.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
     
@@ -1703,7 +1705,7 @@ if __name__ == '__main__':
     # dt = 10.
     # generate_truth_data(rso_file, truth_file, tf_days, dt)
     
-    # define_sensors()
+    define_sensors(sensor_file)
     
     # generate_visibility_dict(truth_file, sensor_file, visibility_file)
 
@@ -1713,7 +1715,7 @@ if __name__ == '__main__':
     # compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
 
 
-    create_estimated_catalog(rso_file, estimated_rso_file)
+    # create_estimated_catalog(rso_file, estimated_rso_file)
 
     
     # test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
