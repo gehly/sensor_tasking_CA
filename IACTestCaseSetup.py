@@ -660,25 +660,47 @@ def create_estimated_catalog(rso_file, output_file):
         Cr = float(rso_dict[obj_id]['Cr'])
         mass = float(rso_dict[obj_id]['mass'])
         area = float(rso_dict[obj_id]['area'])
+        
+        #######################################################################
+        # Simple Diagonal Covariance
+        #######################################################################
+        Po = np.diag([1e6, 1e6, 1e6, 1, 1, 1])
+        Xo = perturb_state_vector(Xo_true, Po)
+        
+        
+        #######################################################################
+        # Batch estimate initial state
+        #######################################################################
+        
            
-        # This setup yields about meter level position errors
-        sigma_dict = {}
-        sigma_dict['x'] = 100.
-        sigma_dict['y'] = 100.
-        sigma_dict['z'] = 100.    
+        # # This setup yields about meter level position errors
+        # sigma_dict = {}
+        # sigma_dict['x'] = 100.
+        # sigma_dict['y'] = 100.
+        # sigma_dict['z'] = 100.    
         
-        kep = cart2kep(Xo_true, 3.986e14)
-        period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
-        tsec = list(np.linspace(0., period, 20))
+        # kep = cart2kep(Xo_true, 3.986e14)
+        # period = 2.*np.pi*np.sqrt(float(kep[0,0])**3/(3.986e14))    
+        # tsec = list(np.linspace(0., period, 20))
         
-        print(tsec)
+        # print(tsec)
         
-        tk_list = [epoch_tdb0 + sec for sec in tsec]
+        # tk_list = [epoch_tdb0 + sec for sec in tsec]
         
-        state_dict, meas_dict, params_dict, truth_dict = \
-            filter_setup(Xo_true, tk_list, meas_types, sigma_dict)
         
-        Xo, Po = run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)
+        
+        # state_dict, meas_dict, params_dict, truth_dict = \
+        #     filter_setup(Xo_true, tk_list, meas_types, sigma_dict)
+        
+        # Xo, Po = run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)
+        
+        # if obj_id > 89000:
+        #     Po *= 1000.
+        #     # Xo = perturb_state_vector(Xo_true, Po)
+            
+        # else:
+        #     Po *= 100.
+        
         
         print('')
         print('obj_id', obj_id)
@@ -687,15 +709,9 @@ def create_estimated_catalog(rso_file, output_file):
         
         print('Xo - Xo_true', Xo - Xo_true)
         
-        mistake
         
         
-        if obj_id > 89000:
-            Po *= 1000.
-            # Xo = perturb_state_vector(Xo_true, Po)
-            
-        else:
-            Po *= 100.
+        
         
         
         
@@ -1229,6 +1245,7 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days):
     for sensor_id in visibility_dict:
         
         colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(obj_id_list)))
+        # colors = ['k']*100
         yval = 1
         fig, ax = plt.subplots()
         
@@ -1293,33 +1310,34 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days):
         
         ax.set_yticks(range(1,len(obj_id_list)+1), labels=[str(obj_id) for obj_id in obj_id_list])
         ax.set_xlabel('Time [hours]')
+        ax.set_ylabel('Object ID')
         ax.set_title('Visibility from ' + sensor_id)
         
             
         
-    # Compute number of objects visible at each time
-    tvec = list(np.arange(t0, t0+tf_days*86400.+1., 10.))
-    thrs = [(tk-t0)/3600. for tk in tvec]
-    # colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(visibility_dict)+1))
-    colors = ['r', 'b', 'g', 'k']
-    cind = 0
-    plt.figure()
-    for sensor_id in visibility_dict:
+    # # Compute number of objects visible at each time
+    # tvec = list(np.arange(t0, t0+tf_days*86400.+1., 10.))
+    # thrs = [(tk-t0)/3600. for tk in tvec]
+    # # colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(visibility_dict)+1))
+    # colors = ['r', 'b', 'g', 'k']
+    # cind = 0
+    # plt.figure()
+    # for sensor_id in visibility_dict:
         
-        nvis_object = np.zeros(len(tvec),)
-        for obj_id in visibility_dict[sensor_id]:
-            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+    #     nvis_object = np.zeros(len(tvec),)
+    #     for obj_id in visibility_dict[sensor_id]:
+    #         tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
             
-            ind_list = [tvec.index(tk) for tk in tk_list]
-            nvis_object[ind_list] += 1
+    #         ind_list = [tvec.index(tk) for tk in tk_list]
+    #         nvis_object[ind_list] += 1
         
-        plt.plot(thrs, nvis_object, '.', color=colors[cind], label=sensor_id)
-        cind += 1
+    #     plt.plot(thrs, nvis_object, '.', color=colors[cind], label=sensor_id)
+    #     cind += 1
                 
             
-    plt.xlabel('Time [hours]')    
-    plt.ylabel('Number of Visible Objects')
-    plt.legend()
+    # plt.xlabel('Time [hours]')    
+    # plt.ylabel('Number of Visible Objects')
+    # plt.legend()
             
     plt.show()
     
@@ -1666,7 +1684,7 @@ if __name__ == '__main__':
     # verify_numerical_error()
     
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
     sensor_file = os.path.join('data', 'sensor_data.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
@@ -1676,32 +1694,32 @@ if __name__ == '__main__':
     
     # create_tertiary_catalog(rso_file)
     
-    tf_days = 7.
+    # tf_days = 7.
     # generate_true_risk_metrics(rso_file, metrics_file, tf_days)
     
     
-    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
-    tf_days = 7.
-    dt = 10.
+    # truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
+    # tf_days = 7.
+    # dt = 10.
     # generate_truth_data(rso_file, truth_file, tf_days, dt)
     
     # define_sensors()
     
     # generate_visibility_dict(truth_file, sensor_file, visibility_file)
 
-    tf_days = 1.
-    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-                   97000, 98000, 99000]
+    # tf_days = 1.
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+    #                97000, 98000, 99000]
     # compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
 
 
-    # create_estimated_catalog(rso_file, estimated_rso_file)
+    create_estimated_catalog(rso_file, estimated_rso_file)
 
-    # 
+    
     # test_estimated_catalog_metrics(estimated_rso_file, 52373, 91000, all_metrics=True)
 
     
-    plot_true_miss_distances(metrics_file)
+    # plot_true_miss_distances(metrics_file)
 
 
 
