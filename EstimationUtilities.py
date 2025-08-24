@@ -254,7 +254,7 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
         Pbar += np.dot(Gamma, np.dot(Q, Gamma.T))
         
         # Remediate covariance if needed
-        Pbar = conj.remediate_covariance(Pbar, 1e-12)[0]
+        # Pbar = conj.remediate_covariance(Pbar, 1e-12)[0]
 
         # Recompute sigma points to incorporate process noise        
         sqP = np.linalg.cholesky(Pbar)
@@ -288,7 +288,7 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
         P = np.dot(P1, np.dot(Pbar, P1.T)) + P2
 
         # Recompute measurments using final state to get resids
-        P = conj.remediate_covariance(P, 1e-12)[0]
+        # P = conj.remediate_covariance(P, 1e-12)[0]
         try:
             sqP = np.linalg.cholesky(P)
         except:

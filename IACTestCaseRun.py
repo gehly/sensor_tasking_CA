@@ -217,15 +217,15 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file, output_file)
     
     # Standard data
     filter_params = {}
-    filter_params['Qeci'] = 1e-10*np.diag([1., 1., 1.])
+    filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
-    filter_params['alpha'] = 1e-4
+    filter_params['alpha'] = 1e-2
     filter_params['gap_seconds'] = 600.
     
     int_params = {}
     int_params['tudat_integrator'] = 'dp87'
     int_params['step'] = 10.
-    int_params['max_step'] = 1000.
+    int_params['max_step'] = 100.
     int_params['min_step'] = 1e-3
     int_params['rtol'] = 1e-12
     int_params['atol'] = 1e-12 
@@ -245,6 +245,7 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file, output_file)
         
         print('')
         print('obj_id', obj_id)
+        t0 = rso_dict[obj_id]['epoch_tdb']
         
         # Retrieve state parameters
         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
@@ -262,6 +263,19 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file, output_file)
         
         # Retrieve measurement data
         filter_meas_dict = meas_dict[obj_id]
+        
+        # # Reduce time window
+        # tk_max = t0 + 7.*24.*3600.
+        # tk_list = meas_dict[obj_id]['tk_list']
+        # Yk_list = meas_dict[obj_id]['Yk_list']
+        # sensor_id_list = meas_dict[obj_id]['sensor_id_list']
+        # ind = bisect.bisect_right(tk_list, tk_max)
+        
+        # filter_meas_dict = {}
+        # filter_meas_dict['tk_list'] = tk_list[0:ind]
+        # filter_meas_dict['Yk_list'] = Yk_list[0:ind]
+        # filter_meas_dict['sensor_id_list'] = sensor_id_list[0:ind]
+        
         
         # Run filter
         filter_output = est.ukf(state_params, filter_meas_dict, sensor_dict,
@@ -358,7 +372,7 @@ if __name__ == '__main__':
     
     process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    # process_baseline_filter_output(output_file, truth_file)
+    process_baseline_filter_output(output_file, truth_file)
     
     
     # process_baseline_cdm_output(estimated_rso_file, output_file)
