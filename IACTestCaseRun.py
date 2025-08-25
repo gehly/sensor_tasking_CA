@@ -82,10 +82,10 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     TCA_dict[98000] = t0 + 145.*3600.
     TCA_dict[99000] = t0 + 162.*3600.
     
-    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-                   97000, 98000, 99000]
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+    #                97000, 98000, 99000]
     
-    # obj_id_list = [52373]
+    obj_id_list = [52373]
     
     
     # Initialize output
@@ -359,15 +359,15 @@ if __name__ == '__main__':
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     sensor_file = os.path.join('data', 'sensor_data_rgradec_lownoise.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise.pkl')
+    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise_52373.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    output_file = os.path.join('data', 'baseline_output_batchPo_rgradec_lownoise.pkl')
-    cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
+    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_52373_6hr_batch.pkl')
+    # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     
-    # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
-    #                                truth_file, meas_file)    
+    generate_baseline_measurements(rso_file, sensor_file, visibility_file,
+                                   truth_file, meas_file)    
     
     
     
@@ -376,7 +376,7 @@ if __name__ == '__main__':
     # process_baseline_filter_output(output_file, truth_file)
     
     
-    process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
+    # process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
 
