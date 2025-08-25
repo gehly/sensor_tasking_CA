@@ -420,6 +420,27 @@ def process_baseline_filter_output(output_file, truth_file):
     return
 
 
+def process_baseline_batch_output(output_file, truth_file):
+    
+    pklFile = open(output_file, 'rb')
+    data = pickle.load( pklFile )
+    output_dict = data[0]
+    full_output_dict = data[1]
+    pklFile.close()
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    for obj_id in output_dict:
+        
+        analysis.compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id)
+    
+    
+    return
+
+
 def process_baseline_cdm_output(rso_file, est_output_file, cdm_file):
     
     pklFile = open(est_output_file, 'rb')
@@ -480,16 +501,16 @@ if __name__ == '__main__':
     
     # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    batch_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
-
+    # batch_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
     # process_baseline_filter_output(output_file, truth_file)
     
+    process_baseline_batch_output(output_file, truth_file)
     
     # process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
-
+    
 
 
 
