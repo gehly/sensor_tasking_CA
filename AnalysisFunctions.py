@@ -199,16 +199,19 @@ def compute_errors(truth_dict, output_dict, obj_id):
     return
 
 
-def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
+def risk_metric_evolution(cdm_file, output_dict, rso_dict, primary_id, tf, bodies=None):
     
     if bodies is None:
         bodies_to_create = ['Sun', 'Earth', 'Moon']
         bodies = prop.tudat_initialize_bodies(bodies_to_create)
         
     # Secondary object id's
-    secondary_id_list = sorted(list(rso_dict.keys()))
-    del_ind = secondary_id_list.index(primary_id)
-    del secondary_id_list[del_ind]
+    # secondary_id_list = sorted(list(rso_dict.keys()))
+    # del_ind = secondary_id_list.index(primary_id)
+    # del secondary_id_list[del_ind]
+    secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000,
+                         98000, 99000]
+    
     
     t0 = rso_dict[52373]['epoch_tdb']
     TCA_dict = {}
@@ -295,8 +298,7 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
         cdm_id += 1  
         
 
-        cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
-        pklFile = open( cdm_file, 'wb' )
+        pklFile = open(cdm_file, 'wb')
         pickle.dump([cdm_dict], pklFile, -1)
         pklFile.close()
                 
@@ -346,14 +348,13 @@ def risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies=None):
             
         # if math.fmod(cdm_id, 10) == 0:
             
-        cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
-        pklFile = open( cdm_file, 'wb' )
+        pklFile = open(cdm_file, 'wb')
         pickle.dump([cdm_dict], pklFile, -1)
         pklFile.close()
         
     
     
-    print(cdm_dict)
+    # print(cdm_dict)
     
     return cdm_dict
 
@@ -464,7 +465,7 @@ if __name__ == '__main__':
     
     plt.close('all')
     
-    cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
+    cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     plot_cdm_data(cdm_file, rso_file)
 

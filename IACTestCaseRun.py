@@ -82,10 +82,10 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     TCA_dict[98000] = t0 + 145.*3600.
     TCA_dict[99000] = t0 + 162.*3600.
     
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-    #                97000, 98000, 99000]
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                   97000, 98000, 99000]
     
-    obj_id_list = [52373]
+    # obj_id_list = [52373]
     
     
     # Initialize output
@@ -313,9 +313,9 @@ def process_baseline_filter_output(output_file, truth_file):
     return
 
 
-def process_baseline_cdm_output(rso_file, output_file):
+def process_baseline_cdm_output(rso_file, est_output_file, cdm_file):
     
-    pklFile = open(output_file, 'rb')
+    pklFile = open(est_output_file, 'rb')
     data = pickle.load( pklFile )
     output_dict = data[0]
     pklFile.close()
@@ -332,11 +332,11 @@ def process_baseline_cdm_output(rso_file, output_file):
     bodies_to_create = ['Sun', 'Earth', 'Moon']
     bodies = prop.tudat_initialize_bodies(bodies_to_create)
     
-    cdm_dict = analysis.risk_metric_evolution(output_dict, rso_dict, primary_id, tf, bodies)
+    cdm_dict = analysis.risk_metric_evolution(cdm_file, output_dict, rso_dict,
+                                              primary_id, tf, bodies)
     
     
     # Save output
-    cdm_file = os.path.join('data', 'baseline_cdm_data.pkl')
     pklFile = open( cdm_file, 'wb' )
     pickle.dump([cdm_dict], pklFile, -1)
     pklFile.close()
@@ -363,6 +363,7 @@ if __name__ == '__main__':
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
     output_file = os.path.join('data', 'baseline_output_batchPo_rgradec_lownoise.pkl')
+    cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -370,12 +371,12 @@ if __name__ == '__main__':
     
     
     
-    process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+    # process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    process_baseline_filter_output(output_file, truth_file)
+    # process_baseline_filter_output(output_file, truth_file)
     
     
-    # process_baseline_cdm_output(estimated_rso_file, output_file)
+    process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
 

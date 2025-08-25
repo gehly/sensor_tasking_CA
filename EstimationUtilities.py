@@ -289,11 +289,10 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
 
         # Recompute measurments using final state to get resids
         # P = conj.remediate_covariance(P, 1e-12)[0]
-        try:
-            sqP = np.linalg.cholesky(P)
-        except:
-            print(np.linalg.det(P))
-            print(np.linalg.eig(P))
+        sqP = np.linalg.cholesky(P)
+        # except:
+        #     print(np.linalg.det(P))
+        #     print(np.linalg.eig(P))
             
         Xrep = np.tile(Xk, (1, n))
         chi_k = np.concatenate((Xk, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)        
