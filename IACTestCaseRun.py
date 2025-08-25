@@ -82,10 +82,10 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     TCA_dict[98000] = t0 + 145.*3600.
     TCA_dict[99000] = t0 + 162.*3600.
     
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-    #                97000, 98000, 99000]
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                   97000, 98000, 99000]
     
-    obj_id_list = [52373]
+    # obj_id_list = [52373]
     
     
     # Initialize output
@@ -416,8 +416,9 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
             state_params['epoch_tdb'] = t0
             state_params['state'] = full_output[t0]['state'] + np.array([[10.], [10.], [10.], [1e-2], [1e-2], [1e-2]])
             state_params['covar'] = np.diag([1e6, 1e6, 1e6, 1, 1, 1])
+            # state_params['covar'] *= 100.
             
-            # if tk_max > rso_dict[obj_id]['epoch_tdb'] + 60*3600.:
+            # if tk_max > rso_dict[obj_id]['epoch_tdb'] + 20*3600.:
             #     break
         
         
@@ -517,10 +518,10 @@ if __name__ == '__main__':
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     sensor_file = os.path.join('data', 'sensor_data_rgradec_lownoise.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise_52373.pkl')
+    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
-    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_52373_8hr_batch.pkl')
+    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_8hr_batch.pkl')
     # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     
@@ -529,10 +530,10 @@ if __name__ == '__main__':
     
     
     
-    # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+    filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
     window_hrs = 8.
-    batch_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file, window_hrs)
+    # batch_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file, window_hrs)
 
     # process_baseline_filter_output(output_file, truth_file)
     
