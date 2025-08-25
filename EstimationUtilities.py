@@ -477,36 +477,49 @@ def unscented_batch(state_params, meas_dict, sensor_dict, int_params, filter_par
                 tk_prior = tk_list[kk-1]
 
             tk = tk_list[kk]
+            
+            # Initial Conditions for Integration Routine
+            int0 = chi_v.copy()
+            
+            # Integrate Xref and STM
+            if tk_prior == tk:
+                intout = int0.T
+            else:
+                int0 = int0.flatten()
+                tin = [tk_prior, tk]
+                
+                tout, intout = prop.propagate_orbit(int0, tin, state_params, int_params, bodies)
     
-            # Read the next observation
-            Yk = Yk_list[kk]
-            sensor_id = sensor_id_list[kk]
-            p = len(Yk)
-  
-        
+            # Extract values for later calculations
+            chi_v = intout[-1,:]
+            chi = np.reshape(chi_v, (n, 2*n+1), order='F')
+    
+    
+
             # Propagate state and covariance
             # No prediction needed if measurement time is same as current state
-            if tk_prior == tk:
-                Xbar = X.copy()
-                Pbar = P.copy()
-            else:
-                tvec = np.array([tk_prior, tk])
-                dum, Xbar, Pbar = prop.propagate_state_and_covar(X, P, tvec, state_params, int_params, bodies, alpha)
+            # if tk_prior == tk:
+            #     Xbar = X.copy()
+            #     Pbar = P.copy()
+            # else:
+            #     tvec = np.array([tk_prior, tk])
+            #     dum, Xbar, Pbar = prop.propagate_state_and_covar(X, P, tvec, state_params, int_params, bodies, alpha)
 
-            # Recompute sigma points     
-            sqP = np.linalg.cholesky(Pbar)
-            Xrep = np.tile(Xbar, (1, n))
-            chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
-            chi_diff = chi_bar - np.dot(Xbar, np.ones((1, (2*n+1))))
+            # # Recompute sigma points     
+            # sqP = np.linalg.cholesky(Pbar)
+            # Xrep = np.tile(Xbar, (1, n))
+            # chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
+            # chi_diff = chi_bar - np.dot(Xbar, np.ones((1, (2*n+1))))
         
             # Measurement Update      
             # Retrieve measurement data
             Yk = Yk_list[kk]
             sensor_id = sensor_id_list[kk]
             sensor_params = sensor_dict[sensor_id]
+            p = len(Yk)
         
             # Computed measurements and covariance
-            gamma_til_k, Rk = unscented_meas(tk, chi_bar, sensor_params, bodies)
+            gamma_til_k, Rk = unscented_meas(tk, chi, sensor_params, bodies)
             
             # Standard implementation computes ybar as the mean of the sigma
             # point, but using Po_bar each iteration can cause these to have
@@ -579,17 +592,15 @@ def unscented_batch(state_params, meas_dict, sensor_dict, int_params, filter_par
         
         
         
-        
-        
     # Setup for full_state_output
-    # Xo = X.copy()
-    # Po = P.copy()
+    Xo = X.copy()
+    Po = P.copy()
     
-    # # Compute Sigma Points
-    # sqP = np.linalg.cholesky(Po)
-    # Xrep = np.tile(Xo, (1, n))
-    # chi0 = np.concatenate((Xo, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)
-    # chi_v = np.reshape(chi0, (n*(2*n+1), 1), order='F')
+    # Compute Sigma Points
+    sqP = np.linalg.cholesky(Po)
+    Xrep = np.tile(Xo, (1, n))
+    chi0 = np.concatenate((Xo, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)
+    chi_v = np.reshape(chi0, (n*(2*n+1), 1), order='F')
     
     # Integrate over full time
     full_state_output = {}
@@ -602,26 +613,80 @@ def unscented_batch(state_params, meas_dict, sensor_dict, int_params, filter_par
             tk_prior = tk_output[kk-1]
             
         tk = tk_output[kk]
-    
-        # Propagate state and covariance
-        # No prediction needed if measurement time is same as current state
+
+        # Initial Conditions for Integration Routine
+        int0 = chi_v.copy()
+
+        # Integrate Xref and STM
         if tk_prior == tk:
-            Xbar = X.copy()
-            Pbar = P.copy()
+            intout = int0.T
         else:
-            tvec = np.array([tk_prior, tk])
-            dum, X, P = prop.propagate_state_and_covar(X, P, tvec, state_params, int_params, bodies, alpha)
-        
+            int0 = int0.flatten()
+            tin = [tk_prior, tk]
+            
+            tout, intout = prop.propagate_orbit(int0, tin, state_params, int_params, bodies)
+
+        # Extract values for later calculations
+        chi_v = intout[-1,:]
+        chi = np.reshape(chi_v, (n, 2*n+1), order='F')
+    
         # Store output
+        Xk = np.dot(chi, Wm.T)
+        Xk = np.reshape(Xk, (n, 1))
+        chi_diff = chi - np.dot(Xk, np.ones((1, (2*n+1))))
+        Pk = np.dot(chi_diff, np.dot(diagWc, chi_diff.T))
+        
         full_state_output[tk] = {}
-        full_state_output[tk]['state'] = X
-        full_state_output[tk]['covar'] = P
+        full_state_output[tk]['state'] = Xk
+        full_state_output[tk]['covar'] = Pk
         
         if tk in tk_list:
             filter_output[tk] = {}
-            filter_output[tk]['state'] = X
-            filter_output[tk]['covar'] = P
-            filter_output[tk]['resids'] = resids_list[tk_list.index(tk)]
+            filter_output[tk]['state'] = Xk
+            filter_output[tk]['covar'] = Pk
+            filter_output[tk]['resids'] = resids_list[tk_list.index(tk)]    
+        
+    # Setup for full_state_output
+    # Xo = X.copy()
+    # Po = P.copy()
+    
+    # # Compute Sigma Points
+    # sqP = np.linalg.cholesky(Po)
+    # Xrep = np.tile(Xo, (1, n))
+    # chi0 = np.concatenate((Xo, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)
+    # chi_v = np.reshape(chi0, (n*(2*n+1), 1), order='F')
+    
+    # # Integrate over full time
+    # full_state_output = {}
+    # for kk in range(len(tk_output)):
+        
+    #     # Current and previous time
+    #     if kk == 0:
+    #         tk_prior = t0
+    #     else:
+    #         tk_prior = tk_output[kk-1]
+            
+    #     tk = tk_output[kk]
+    
+    #     # Propagate state and covariance
+    #     # No prediction needed if measurement time is same as current state
+    #     if tk_prior == tk:
+    #         Xbar = X.copy()
+    #         Pbar = P.copy()
+    #     else:
+    #         tvec = np.array([tk_prior, tk])
+    #         dum, X, P = prop.propagate_state_and_covar(X, P, tvec, state_params, int_params, bodies, alpha)
+        
+    #     # Store output
+    #     full_state_output[tk] = {}
+    #     full_state_output[tk]['state'] = X
+    #     full_state_output[tk]['covar'] = P
+        
+    #     if tk in tk_list:
+    #         filter_output[tk] = {}
+    #         filter_output[tk]['state'] = X
+    #         filter_output[tk]['covar'] = P
+    #         filter_output[tk]['resids'] = resids_list[tk_list.index(tk)]
         
         
         

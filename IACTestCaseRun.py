@@ -340,6 +340,7 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file, output
     
     # Loop over objects
     output_dict = {}
+    full_output_dict = {}
     obj_id_list = list(meas_dict.keys())
     for obj_id in obj_id_list:
         
@@ -381,16 +382,18 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file, output
         
         
         # Run filter
-        filter_output = est.unscented_batch(state_params, filter_meas_dict,
-                                            sensor_dict, int_params,
-                                            filter_params, bodies)
+        filter_output, full_output = \
+            est.unscented_batch(state_params, filter_meas_dict,
+                                sensor_dict, int_params,
+                                filter_params, bodies)
         
         output_dict[obj_id] = filter_output
+        full_output_dict[obj_id] = full_output
         
         
     # Save output
     pklFile = open( output_file, 'wb' )
-    pickle.dump([output_dict], pklFile, -1)
+    pickle.dump([output_dict, full_output_dict], pklFile, -1)
     pklFile.close()
     
     
@@ -476,6 +479,9 @@ if __name__ == '__main__':
     
     
     # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+
+    batch_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+
 
     # process_baseline_filter_output(output_file, truth_file)
     
