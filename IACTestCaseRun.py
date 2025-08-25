@@ -366,7 +366,7 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file, output
         # filter_meas_dict = meas_dict[obj_id]
         
         # Reduce time window
-        tk_max = t0 + 6.*3600.
+        tk_max = t0 + 8.*3600.
         tk_list = meas_dict[obj_id]['tk_list']
         Yk_list = meas_dict[obj_id]['Yk_list']
         sensor_id_list = meas_dict[obj_id]['sensor_id_list']
@@ -490,7 +490,7 @@ if __name__ == '__main__':
     meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise_52373.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
-    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_52373_6hr_batch.pkl')
+    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_52373_8hr_batch.pkl')
     # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     

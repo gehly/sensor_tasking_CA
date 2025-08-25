@@ -205,6 +205,9 @@ def compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id):
     X_truth = truth_dict[obj_id]['X_truth']
     filter_output = output_dict[obj_id]
     full_state_output = full_output_dict[obj_id]
+    
+    print(X_truth[0])
+    mistake
         
     # Times
     tk_list = list(full_state_output.keys())
@@ -312,21 +315,21 @@ def compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id):
     plt.plot(thrs_meas, X_err_meas[0,:], 'b.')
     plt.plot(thrs, 3*sig_x, 'k--')
     plt.plot(thrs, -3*sig_x, 'k--')
-    plt.ylabel('X Err [km]')
+    plt.ylabel('X Err [m]')
     
     plt.subplot(3,1,2)
     plt.plot(thrs, X_err[1,:], 'k.')
     plt.plot(thrs_meas, X_err_meas[1,:], 'b.')
     plt.plot(thrs, 3*sig_y, 'k--')
     plt.plot(thrs, -3*sig_y, 'k--')
-    plt.ylabel('Y Err [km]')
+    plt.ylabel('Y Err [m]')
     
     plt.subplot(3,1,3)
     plt.plot(thrs, X_err[2,:], 'k.')
     plt.plot(thrs_meas, X_err_meas[2,:], 'b.')
     plt.plot(thrs, 3*sig_z, 'k--')
     plt.plot(thrs, -3*sig_z, 'k--')
-    plt.ylabel('Z Err [km]')
+    plt.ylabel('Z Err [m]')
 
     plt.xlabel('Time [hours]')
     
@@ -336,21 +339,21 @@ def compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id):
     plt.plot(thrs_meas, X_err_meas[3,:], 'b.')
     plt.plot(thrs, 3*sig_dx, 'k--')
     plt.plot(thrs, -3*sig_dx, 'k--')
-    plt.ylabel('dX Err [km/s]')
+    plt.ylabel('dX Err [m/s]')
     
     plt.subplot(3,1,2)
     plt.plot(thrs, X_err[4,:], 'k.')
     plt.plot(thrs_meas, X_err_meas[4,:], 'b.')
     plt.plot(thrs, 3*sig_dy, 'k--')
     plt.plot(thrs, -3*sig_dy, 'k--')
-    plt.ylabel('dY Err [km/s]')
+    plt.ylabel('dY Err [m/s]')
     
     plt.subplot(3,1,3)
     plt.plot(thrs, X_err[5,:], 'k.')
     plt.plot(thrs_meas, X_err_meas[5,:], 'b.')
     plt.plot(thrs, 3*sig_dz, 'k--')
     plt.plot(thrs, -3*sig_dz, 'k--')
-    plt.ylabel('dZ Err [km/s]')
+    plt.ylabel('dZ Err [m/s]')
 
     plt.xlabel('Time [hours]')
     
@@ -360,21 +363,21 @@ def compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id):
     plt.plot(thrs_meas, X_err_ric_meas[0,:], 'b.')
     plt.plot(thrs, 3*sig_r, 'k--')
     plt.plot(thrs, -3*sig_r, 'k--')
-    plt.ylabel('Radial [km]')
+    plt.ylabel('Radial [m]')
     
     plt.subplot(3,1,2)
     plt.plot(thrs, X_err_ric[1,:], 'k.')
     plt.plot(thrs_meas, X_err_ric_meas[1,:], 'b.')
     plt.plot(thrs, 3*sig_i, 'k--')
     plt.plot(thrs, -3*sig_i, 'k--')
-    plt.ylabel('In-Track [km]')
+    plt.ylabel('In-Track [m]')
     
     plt.subplot(3,1,3)
     plt.plot(thrs, X_err_ric[2,:], 'k.')
     plt.plot(thrs_meas, X_err_ric_meas[2,:], 'b.')
     plt.plot(thrs, 3*sig_c, 'k--')
     plt.plot(thrs, -3*sig_c, 'k--')
-    plt.ylabel('Cross-Track [km]')
+    plt.ylabel('Cross-Track [m]')
 
     plt.xlabel('Time [hours]')
     
