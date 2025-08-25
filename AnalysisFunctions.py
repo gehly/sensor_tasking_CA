@@ -207,8 +207,10 @@ def compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id):
     full_state_output = full_output_dict[obj_id]
     
     print(X_truth[0])
-    mistake
-        
+    
+    # print(filter_output.keys())
+    
+    
     # Times
     tk_list = list(full_state_output.keys())
     t0 = t_truth[0]
