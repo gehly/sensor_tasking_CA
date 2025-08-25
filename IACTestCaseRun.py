@@ -82,10 +82,10 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     TCA_dict[98000] = t0 + 145.*3600.
     TCA_dict[99000] = t0 + 162.*3600.
     
-    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-                   97000, 98000, 99000]
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+    #                97000, 98000, 99000]
     
-    # obj_id_list = [52373]
+    obj_id_list = [52373]
     
     
     # Initialize output
@@ -217,10 +217,10 @@ def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, outpu
     
     # Standard data
     filter_params = {}
-    filter_params['Qeci'] = 1e-16*np.diag([1., 1., 1.])
+    filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
     filter_params['alpha'] = 1e-2
-    filter_params['gap_seconds'] = 600.
+    filter_params['gap_seconds'] = 900.
     
     int_params = {}
     int_params['tudat_integrator'] = 'dp87'
@@ -278,8 +278,8 @@ def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, outpu
         
         
         # Run filter
-        filter_output = est.ukf(state_params, filter_meas_dict, sensor_dict,
-                                int_params, filter_params, bodies)
+        filter_output = est.ukf2(state_params, filter_meas_dict, sensor_dict,
+                                 int_params, filter_params, bodies)
         
         output_dict[obj_id] = filter_output
         
@@ -345,8 +345,7 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
     obj_id_list = list(meas_dict.keys())
     for obj_id in obj_id_list:
         
-        print('')
-        print('obj_id', obj_id)
+        
         t0 = rso_dict[obj_id]['epoch_tdb']
         output_dict[obj_id] = {}
         full_output_dict[obj_id] = {}
@@ -383,6 +382,8 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
             ind_0 = bisect.bisect_left(tk_list, t0)
             ind_f = bisect.bisect_right(tk_list, tk_max)
             
+            print('')
+            print('obj_id', obj_id)
             print('t0', t0)
             print('tk_max', tk_max)
             print('dt_hrs', (tk_max-t0)/3600.)
@@ -422,10 +423,10 @@ def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
             #     break
         
         
-            # Save output
-            pklFile = open( output_file, 'wb' )
-            pickle.dump([output_dict, full_output_dict], pklFile, -1)
-            pklFile.close()
+        # Save output
+        pklFile = open( output_file, 'wb' )
+        pickle.dump([output_dict, full_output_dict], pklFile, -1)
+        pklFile.close()
     
     
     return
@@ -518,10 +519,10 @@ if __name__ == '__main__':
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     sensor_file = os.path.join('data', 'sensor_data_rgradec_lownoise.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise.pkl')
+    meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise_52373.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
-    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_8hr_batch.pkl')
+    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_6hr_ukf2.pkl')
     # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     
@@ -530,12 +531,15 @@ if __name__ == '__main__':
     
     
     
-    filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+    # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    window_hrs = 8.
+    process_baseline_filter_output(output_file, truth_file)
+
+
+    # window_hrs = 8.
     # batch_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file, window_hrs)
 
-    # process_baseline_filter_output(output_file, truth_file)
+    
     
     # process_baseline_batch_output(output_file, truth_file)
     
