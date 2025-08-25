@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import os
 import pandas as pd
 import pickle
+import scipy
 
 
 from tudatpy.numerical_simulation import environment_setup
@@ -320,6 +321,312 @@ def ukf(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies)
 
     
     return filter_output
+
+
+###############################################################################
+# Unscented Batch
+###############################################################################
+
+
+def unscented_batch(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies):    
+    '''
+    This function implements the Unscented Kalman Filter for the least
+    squares cost function.
+
+    Parameters
+    ------
+    state_params : dictionary
+        initial state and covariance for filter execution and propagator params
+        
+        fields:
+            epoch_tdb: epoch of state/covar [seconds since J2000]
+            state: nx1 numpy array contaiing position/velocity state in ECI [m, m/s]
+            covar: nxn numpy array containing Gaussian covariance matrix [m^2, m^2/s^2]
+            Cd: float, drag coefficient
+            Cr: float, reflectivity coefficient
+            area: float [m^2]
+            mass: float [kg]
+            sph_deg: int, spherical harmonics expansion degree for Earth
+            sph_ord: int, spherical harmonics expansion order for Earth
+            central_bodies: list of central bodies for propagator ["Earth"]
+            bodies_to_create: list of bodies to create ["Earth", "Sun", "Moon"]
+            
+    meas_dict : dictionary
+        measurement data over time for the filter 
+        
+        fields:
+            tk_list: list of times in seconds since J2000
+            Yk_list: list of px1 numpy arrays containing measurement data
+            sensor_id_list: list of sensor id's corresponding to each measurement
+            
+    sensor_dict : dictionary
+        location, constraint, noise parameters of sensor, indexed by sensor id
+        
+    int_params : dictionary
+        numerical integration parameters
+        
+    filter_params : dictionary
+        fields:
+            Qeci: 3x3 numpy array of SNC accelerations in ECI [m/s^2]
+            Qric: 3x3 numpy array of SNC accelerations in RIC [m/s^2]
+            alpha: float, UKF sigma point spread parameter, should be in range [1e-4, 1]
+            gap_seconds: float, time in seconds between measurements for which SNC should be zeroed out, i.e., if tk-tk_prior > gap_seconds, set Q=0
+            
+    bodies : tudat object
+        contains parameters for the environment bodies used in propagation
+
+    Returns
+    ------
+    filter_output : dictionary
+        output state, covariance, and post-fit residuals at measurement times
+        
+        indexed first by tk, then contains fields:
+            state: nx1 numpy array, estimated Cartesian state vector at tk [m, m/s]
+            covar: nxn numpy array, estimated covariance at tk [m^2, m^2/s^2]
+            resids: px1 numpy array, measurement residuals at tk [meters and/or radians]
+        
+    '''
+        
+    # Retrieve data from input parameters
+    t0 = state_params['epoch_tdb']
+    Xo = state_params['state']
+    Po = state_params['covar']    
+    Qeci = filter_params['Qeci']
+    Qric = filter_params['Qric']
+    alpha = filter_params['alpha']
+    gap_seconds = filter_params['gap_seconds']
+    tk_output = filter_params['tk_output']
+
+    n = len(Xo)
+    q = int(Qeci.shape[0])
+    
+    # Prior information about the distribution
+    beta = 2.
+    kappa = 3. - float(n)
+    
+    # Compute sigma point weights    
+    lam = alpha**2.*(n + kappa) - n
+    gam = np.sqrt(n + lam)
+    Wm = 1./(2.*(n + lam)) * np.ones(2*n,)
+    Wc = Wm.copy()
+    Wm = np.insert(Wm, 0, lam/(n + lam))
+    Wc = np.insert(Wc, 0, lam/(n + lam) + (1 - alpha**2 + beta))
+    diagWc = np.diag(Wc)
+
+    # Initialize output
+    filter_output = {}
+
+    # Measurement times
+    tk_list = meas_dict['tk_list']
+    Yk_list = meas_dict['Yk_list']
+    sensor_id_list = meas_dict['sensor_id_list']
+    nmeas = sum([len(Yk) for Yk in Yk_list])
+    
+    # Number of epochs
+    N = len(tk_list)
+    
+    # Initialize 
+    X = Xo.copy()
+    P = Po.copy()
+    maxiters = 10
+    xdiff = 1
+    rms_prior = 1e6
+    xdiff_crit = 1e-5
+    rms_crit = 1e-4
+    conv_flag = False 
+    
+    # Begin loop
+    iters = 0
+    while not conv_flag:
+
+        # Increment loop counter and exit if necessary
+        iters += 1
+        if iters > maxiters:
+            iters -= 1
+            print('Solution did not converge in ', iters, ' iterations')
+            print('Last xdiff magnitude: ', xdiff)
+            break
+
+        # Initialze values for this iteration
+        # Reset P every iteration???
+        P = Po.copy()
+    
+        # Compute Sigma Points
+        sqP = np.linalg.cholesky(P)
+        Xrep = np.tile(X, (1, n))
+        chi0 = np.concatenate((X, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)
+        chi_v = np.reshape(chi0, (n*(2*n+1), 1), order='F')  
+        chi_diff0 = chi0 - np.dot(X, np.ones((1, 2*n+1)))
+        
+        # Loop over times
+        meas_ind = 0
+        Y_bar = np.zeros((nmeas, 1))
+        Y_til = np.zeros((nmeas, 1))
+        gamma_til_mat = np.zeros((nmeas, 2*n+1))
+        Rk_list = []
+        resids_list = []
+        resids_sum = 0.
+        for kk in range(N):
+            
+#            print('\nkk = ', kk)
+            
+            # Current and previous time
+            if kk == 0:
+                tk_prior = t0
+            else:
+                tk_prior = tk_list[kk-1]
+
+            tk = tk_list[kk]
+    
+            # Read the next observation
+            Yk = Yk_list[kk]
+            sensor_id = sensor_id_list[kk]
+            p = len(Yk)
+  
+        
+            # Propagate state and covariance
+            # No prediction needed if measurement time is same as current state
+            if tk_prior == tk:
+                Xbar = X.copy()
+                Pbar = P.copy()
+            else:
+                tvec = np.array([tk_prior, tk])
+                dum, Xbar, Pbar = prop.propagate_state_and_covar(X, P, tvec, state_params, int_params, bodies, alpha)
+
+            # Recompute sigma points     
+            sqP = np.linalg.cholesky(Pbar)
+            Xrep = np.tile(Xbar, (1, n))
+            chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
+            chi_diff = chi_bar - np.dot(Xbar, np.ones((1, (2*n+1))))
+        
+            # Measurement Update      
+            # Retrieve measurement data
+            Yk = Yk_list[kk]
+            sensor_id = sensor_id_list[kk]
+            sensor_params = sensor_dict[sensor_id]
+        
+            # Computed measurements and covariance
+            gamma_til_k, Rk = unscented_meas(tk, chi_bar, sensor_params, bodies)
+            
+            # Standard implementation computes ybar as the mean of the sigma
+            # point, but using Po_bar each iteration can cause these to have
+            # large spread and produce poor ybar calculation
+            # ybar = np.dot(gamma_til_k, Wm.T)
+            
+            # Instead, use only the first column of gamma_til_k, corresponding
+            # to the mean state calculated with the best updated value of X(t0)
+            ybar = gamma_til_k[:,0]
+            
+            # Reshape and continue
+            ybar = np.reshape(ybar, (p, 1))
+            resids = Yk - ybar
+            cholRk = np.linalg.inv(np.linalg.cholesky(Rk))
+            invRk = np.dot(cholRk.T, cholRk)
+            
+            # Accumulate measurements and computed measurements
+            Y_til[meas_ind:meas_ind+p] = Yk
+            Y_bar[meas_ind:meas_ind+p] = ybar
+            gamma_til_mat[meas_ind:meas_ind+p, :] = gamma_til_k  
+            Rk_list.append(Rk)
+            
+            # Store output
+            resids_list.append(resids)
+            resids_sum += float(np.dot(resids.T, np.dot(invRk, resids)))
+            
+            # Increment measurement index
+            meas_ind += p
+                        
+        # Compute covariances
+        Rk_full = scipy.linalg.block_diag(*Rk_list)
+        Y_diff = gamma_til_mat - np.dot(Y_bar, np.ones((1, 2*n+1)))
+            
+        Pyy = np.dot(Y_diff, np.dot(diagWc, Y_diff.T)) + Rk_full
+        Pxy = np.dot(chi_diff0, np.dot(diagWc, Y_diff.T)) 
+        
+        # Compute Kalman Gain
+        cholPyy_inv = np.linalg.inv(np.linalg.cholesky(Pyy))
+        Pyy_inv = np.dot(cholPyy_inv.T, cholPyy_inv) 
+        
+        K = np.dot(Pxy, Pyy_inv)
+        
+        # Compute updated state and covariance    
+        X += np.dot(K, Y_til-Y_bar)
+        
+        # Joseph Form        
+        cholPbar = np.linalg.inv(np.linalg.cholesky(P))
+        invPbar = np.dot(cholPbar.T, cholPbar)
+        P1 = (np.eye(n) - np.dot(np.dot(K, np.dot(Pyy, K.T)), invPbar))
+        P2 = np.dot(K, np.dot(Rk_full, K.T))
+        P = np.dot(P1, np.dot(P, P1.T)) + P2
+        
+        xdiff = np.linalg.norm(np.dot(K, Y_til-Y_bar))
+        
+        resids_rms = np.sqrt(resids_sum/nmeas)
+        resids_diff = abs(resids_rms - rms_prior)/rms_prior
+        if resids_diff < rms_crit:
+            conv_flag = True
+            
+        rms_prior = float(resids_rms)
+        
+
+        print('Iteration Number: ', iters)
+        print('xdiff = ', xdiff)
+        print('delta-X = ', np.dot(K, Y_til-Y_bar))
+        print('Xo', Xo)
+        print('X', X)
+        print('resids_rms = ', resids_rms)
+        print('resids_diff = ', resids_diff)
+        
+        
+        
+        
+        
+    # Setup for full_state_output
+    # Xo = X.copy()
+    # Po = P.copy()
+    
+    # # Compute Sigma Points
+    # sqP = np.linalg.cholesky(Po)
+    # Xrep = np.tile(Xo, (1, n))
+    # chi0 = np.concatenate((Xo, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)
+    # chi_v = np.reshape(chi0, (n*(2*n+1), 1), order='F')
+    
+    # Integrate over full time
+    full_state_output = {}
+    for kk in range(len(tk_output)):
+        
+        # Current and previous time
+        if kk == 0:
+            tk_prior = t0
+        else:
+            tk_prior = tk_output[kk-1]
+            
+        tk = tk_output[kk]
+    
+        # Propagate state and covariance
+        # No prediction needed if measurement time is same as current state
+        if tk_prior == tk:
+            Xbar = X.copy()
+            Pbar = P.copy()
+        else:
+            tvec = np.array([tk_prior, tk])
+            dum, X, P = prop.propagate_state_and_covar(X, P, tvec, state_params, int_params, bodies, alpha)
+        
+        # Store output
+        full_state_output[tk] = {}
+        full_state_output[tk]['state'] = X
+        full_state_output[tk]['covar'] = P
+        
+        if tk in tk_list:
+            filter_output[tk] = {}
+            filter_output[tk]['state'] = X
+            filter_output[tk]['covar'] = P
+            filter_output[tk]['resids'] = resids_list[tk_list.index(tk)]
+        
+        
+        
+    
+    return filter_output, full_state_output
 
 
 ###############################################################################

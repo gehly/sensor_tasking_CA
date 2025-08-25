@@ -194,7 +194,7 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     return
 
 
-def process_baseline_measurements(rso_file, sensor_file, meas_file, output_file):
+def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, output_file):
     
     
     # Load rso data
@@ -262,24 +262,128 @@ def process_baseline_measurements(rso_file, sensor_file, meas_file, output_file)
         #     state_params['covar'] *= 0.01
         
         # Retrieve measurement data
-        filter_meas_dict = meas_dict[obj_id]
+        # filter_meas_dict = meas_dict[obj_id]
         
-        # # Reduce time window
-        # tk_max = t0 + 7.*24.*3600.
-        # tk_list = meas_dict[obj_id]['tk_list']
-        # Yk_list = meas_dict[obj_id]['Yk_list']
-        # sensor_id_list = meas_dict[obj_id]['sensor_id_list']
-        # ind = bisect.bisect_right(tk_list, tk_max)
+        # Reduce time window
+        tk_max = t0 + 6.*3600.
+        tk_list = meas_dict[obj_id]['tk_list']
+        Yk_list = meas_dict[obj_id]['Yk_list']
+        sensor_id_list = meas_dict[obj_id]['sensor_id_list']
+        ind = bisect.bisect_right(tk_list, tk_max)
         
-        # filter_meas_dict = {}
-        # filter_meas_dict['tk_list'] = tk_list[0:ind]
-        # filter_meas_dict['Yk_list'] = Yk_list[0:ind]
-        # filter_meas_dict['sensor_id_list'] = sensor_id_list[0:ind]
+        filter_meas_dict = {}
+        filter_meas_dict['tk_list'] = tk_list[0:ind]
+        filter_meas_dict['Yk_list'] = Yk_list[0:ind]
+        filter_meas_dict['sensor_id_list'] = sensor_id_list[0:ind]
         
         
         # Run filter
         filter_output = est.ukf(state_params, filter_meas_dict, sensor_dict,
                                 int_params, filter_params, bodies)
+        
+        output_dict[obj_id] = filter_output
+        
+        
+    # Save output
+    pklFile = open( output_file, 'wb' )
+    pickle.dump([output_dict], pklFile, -1)
+    pklFile.close()
+    
+    
+    return
+
+
+def batch_process_baseline_measurements(rso_file, sensor_file, meas_file, output_file):
+    
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    # Load sensor data
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()    
+    
+    # Load measurement data
+    pklFile = open(meas_file, 'rb')
+    data = pickle.load( pklFile )
+    meas_dict = data[0]
+    pklFile.close() 
+    
+    # Standard data
+    filter_params = {}
+    filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
+    filter_params['Qric'] = 0*np.diag([1., 1., 1.])
+    filter_params['alpha'] = 1e-2
+    filter_params['gap_seconds'] = 600.
+    
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 100.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12 
+    
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)   
+    state_params = {}    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    # Loop over objects
+    output_dict = {}
+    obj_id_list = list(meas_dict.keys())
+    for obj_id in obj_id_list:
+        
+        print('')
+        print('obj_id', obj_id)
+        t0 = rso_dict[obj_id]['epoch_tdb']
+        
+        # Retrieve state parameters
+        state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
+        state_params['state'] = rso_dict[obj_id]['state']
+        state_params['covar'] = rso_dict[obj_id]['covar']
+        state_params['mass'] = rso_dict[obj_id]['mass']
+        state_params['area'] = rso_dict[obj_id]['area']
+        state_params['Cd'] = rso_dict[obj_id]['Cd']
+        state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+        # if obj_id == 52373:
+        #     state_params['covar'] *= 100.
+        # else:
+        #     state_params['covar'] *= 0.01
+        
+        # Retrieve measurement data
+        # filter_meas_dict = meas_dict[obj_id]
+        
+        # Reduce time window
+        tk_max = t0 + 6.*3600.
+        tk_list = meas_dict[obj_id]['tk_list']
+        Yk_list = meas_dict[obj_id]['Yk_list']
+        sensor_id_list = meas_dict[obj_id]['sensor_id_list']
+        ind = bisect.bisect_right(tk_list, tk_max)
+        
+        filter_meas_dict = {}
+        filter_meas_dict['tk_list'] = tk_list[0:ind]
+        filter_meas_dict['Yk_list'] = Yk_list[0:ind]
+        filter_meas_dict['sensor_id_list'] = sensor_id_list[0:ind]
+        
+        # Set tk_output in filter_params
+        filter_params['tk_output'] = list(np.arange(t0, tk_max+1., 10.))
+        
+        
+        # Run filter
+        filter_output = est.unscented_batch(state_params, filter_meas_dict,
+                                            sensor_dict, int_params,
+                                            filter_params, bodies)
         
         output_dict[obj_id] = filter_output
         
@@ -361,17 +465,17 @@ if __name__ == '__main__':
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise_52373.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
     output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_52373_6hr_batch.pkl')
     # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     
-    generate_baseline_measurements(rso_file, sensor_file, visibility_file,
-                                   truth_file, meas_file)    
+    # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
+    #                                truth_file, meas_file)    
     
     
     
-    # process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+    # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
     # process_baseline_filter_output(output_file, truth_file)
     
