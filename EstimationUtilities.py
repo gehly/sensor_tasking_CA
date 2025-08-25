@@ -477,11 +477,11 @@ def ukf2(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies
         chi_diff = chi - np.dot(Xbar, np.ones((1, (2*n+1))))
         Pbar = np.dot(chi_diff, np.dot(diagWc, chi_diff.T)) + np.dot(Gamma, np.dot(Qeci, Gamma.T))
         
-        print('')
-        print('kk', kk)
+        # print('')
+        # print('kk', kk)
         # print('Pbar', Pbar)
         # print('eig', np.linalg.eig(Pbar))
-        print('det', np.linalg.det(Pbar))
+        # print('det', np.linalg.det(Pbar))
 
         # # Combined Q matrix (ECI and RIC components)
         # # Rotate RIC to ECI and add
@@ -515,8 +515,8 @@ def ukf2(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies
         Pyy = np.dot(Y_diff, np.dot(diagWc, Y_diff.T)) + Rk
         Pxy = np.dot(chi_diff,  np.dot(diagWc, Y_diff.T))
         
-        print('Yk', Yk)
-        print('ybar', ybar)
+        # print('Yk', Yk)
+        # print('ybar', ybar)
         
         # Kalman gain and measurement update
         Kk = np.dot(Pxy, np.linalg.inv(Pyy))
@@ -551,11 +551,8 @@ def ukf2(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies
         print('delta_t', delta_t)
         print('Xbar', Xbar)
         print('Yk', Yk)
-        print('ybar', ybar)   
-        print('ybar_post', ybar_post)
+        print('ybar', ybar)     
         print('resids', resids)
-        print('Pbar', Pbar)
-        print('Pk', Pk)
         
         # Store output
         filter_output[tk] = {}
