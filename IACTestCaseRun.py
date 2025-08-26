@@ -521,9 +521,9 @@ if __name__ == '__main__':
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     meas_file = os.path.join('data', 'baseline_measurement_data_rgradec_lownoise.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_diagPo.pkl')
-    output_file = os.path.join('data', 'baseline_output_diagPo_rgradec_lownoise_ukf2.pkl')
-    # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    output_file = os.path.join('data', 'baseline_output_batchPo_rgradec_lownoise_ukf2.pkl')
+    cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgradec_lownoise.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -533,7 +533,7 @@ if __name__ == '__main__':
     
     # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    process_baseline_filter_output(output_file, truth_file)
+    # process_baseline_filter_output(output_file, truth_file)
 
 
     # window_hrs = 8.
@@ -543,7 +543,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
+    process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     

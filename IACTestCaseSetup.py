@@ -695,12 +695,12 @@ def create_estimated_catalog(rso_file, output_file):
         
         Xo, Po = run_filter(state_dict, truth_dict, meas_dict, meas_fcn, params_dict)
         
-        # if obj_id > 89000:
-        #     Po *= 1000.
-            # Xo = perturb_state_vector(Xo_true, Po)
+        if obj_id > 89000:
+            Po *= 10000.
+            Xo = perturb_state_vector(Xo_true, Po)
             
-        # else:
-        #     Po *= 100.
+        else:
+            Po *= 100.
         
         # Po *= 1000.
         
@@ -1705,7 +1705,7 @@ if __name__ == '__main__':
     # dt = 10.
     # generate_truth_data(rso_file, truth_file, tf_days, dt)
     
-    define_sensors(sensor_file)
+    # define_sensors(sensor_file)
     
     # generate_visibility_dict(truth_file, sensor_file, visibility_file)
 
