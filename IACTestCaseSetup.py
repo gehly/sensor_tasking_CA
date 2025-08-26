@@ -808,18 +808,18 @@ def define_sensors(sensor_file):
     
     # Measurement types and noise
     # Approximated from Cerruti-Maori (SDC8)
-    # meas_types = ['rg', 'az', 'el']
-    # sigma_dict = {}
-    # sigma_dict['rg'] = 10.                  # m
-    # sigma_dict['rr'] = 0.01                   # m/s
-    # sigma_dict['az'] = np.radians(0.01)     # rad
-    # sigma_dict['el'] = np.radians(0.01)    # rad
-    
     meas_types = ['rg', 'az', 'el']
     sigma_dict = {}
-    sigma_dict['rg'] = 1.
-    sigma_dict['az'] = 5.*arcsec2rad
-    sigma_dict['el'] = 5.*arcsec2rad
+    sigma_dict['rg'] = 10.                  # m
+    # sigma_dict['rr'] = 0.01                   # m/s
+    sigma_dict['az'] = np.radians(0.01)     # rad
+    sigma_dict['el'] = np.radians(0.01)    # rad
+    
+    # meas_types = ['rg', 'az', 'el']
+    # sigma_dict = {}
+    # sigma_dict['rg'] = 1.
+    # sigma_dict['az'] = 5.*arcsec2rad
+    # sigma_dict['el'] = 5.*arcsec2rad
     
     
     
@@ -849,11 +849,11 @@ def define_sensors(sensor_file):
     
     # Measurement types and noise
     # Range from Abouzahra, angles approximated from Vallado
-    # meas_types = ['rg', 'az', 'el']
-    # sigma_dict = {}
-    # sigma_dict['rg'] = 10.0   # 13.5 (Abouzahra)                  # m
-    # sigma_dict['az'] = np.radians(0.01)     # 0.03 (Vallado) # rad
-    # sigma_dict['el'] = np.radians(0.01)    # rad
+    meas_types = ['rg', 'az', 'el']
+    sigma_dict = {}
+    sigma_dict['rg'] = 10.0   # 13.5 (Abouzahra)                  # m
+    sigma_dict['az'] = np.radians(0.01)     # 0.03 (Vallado) # rad
+    sigma_dict['el'] = np.radians(0.01)    # rad
     
     
     sensor_dict['ALTAIR'] = \
@@ -1687,7 +1687,7 @@ if __name__ == '__main__':
     
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    sensor_file = os.path.join('data', 'sensor_data_rgazel_lownoise.pkl')
+    sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
     metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
     
