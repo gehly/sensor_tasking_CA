@@ -533,7 +533,7 @@ if __name__ == '__main__':
     
     # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    process_baseline_filter_output(output_file, truth_file)
+    # process_baseline_filter_output(output_file, truth_file)
 
 
     # window_hrs = 8.
@@ -543,7 +543,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
+    process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     
