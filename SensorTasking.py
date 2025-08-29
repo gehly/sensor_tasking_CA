@@ -13,6 +13,7 @@ from tudatpy.numerical_simulation import environment_setup
 # Import utility functions
 import TudatPropagator as prop
 import EstimationUtilities as est
+import ConjunctionUtilities as conj
 
 
 ###############################################################################
@@ -175,6 +176,8 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
                 t0 = rso_dict[obj_id]['epoch_tdb']
                 Xo = rso_dict[obj_id]['state']
                 Po = rso_dict[obj_id]['covar']
+                Po = conj.remediate_covariance(Po, 1e-12)[0]
+                
                 state_params['mass'] = rso_dict[obj_id]['mass']
                 state_params['area'] = rso_dict[obj_id]['area']
                 state_params['Cd'] = rso_dict[obj_id]['Cd']
@@ -193,6 +196,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
                 rso_dict[obj_id]['covar'] = Pbar               
                 
                 # Compute updated covar
+                Pbar = conj.remediate_covariance(Pbar, 1e-12)[0]
                 sqP = np.linalg.cholesky(Pbar)
                 Xrep = np.tile(Xbar, (1, n))
                 chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
@@ -214,7 +218,8 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
                 invPbar = np.dot(cholPbar.T, cholPbar)
                 P1 = (np.eye(n) - np.dot(np.dot(Kk, np.dot(Pyy, Kk.T)), invPbar))
                 P2 = np.dot(Kk, np.dot(Rk, Kk.T))
-                Pk = np.dot(P1, np.dot(Pbar, P1.T)) + P2                
+                Pk = np.dot(P1, np.dot(Pbar, P1.T)) + P2  
+                Pk = conj.remediate_covariance(Pk, 1e-12)[0]
                 
                 # Compute reward and store with posterior covar
                 params = {}
@@ -271,9 +276,8 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
             meas_dict[max_obj_id]['sensor_id_list'].append(sensor_id)
             
             
-            # if tk - t0_all > 100:
-            #     print(meas_dict)
-            #     mistake
+        if tk - t0_all > 12*3600:
+            break
                 
 
     
