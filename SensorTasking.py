@@ -14,6 +14,91 @@ import TudatPropagator as prop
 
 
 ###############################################################################
+# Reward Functions
+###############################################################################
+
+def compute_gaussian_renyi_infogain(P0, P1, tau=1.):
+    '''
+    This function computes the analytic Renyi divergence for a single Gaussian 
+    component. It assumes no noise, therefore m0 = m1.
+
+    Parameters
+    ------
+    P0 : nxn numpy array
+        prior covariance matrix
+    P1 : nxn numpy array
+        posterior covariance matrix
+    tau : float (optional)
+        tactical importance function value (priority) (default = 1.0)
+
+    Returns
+    ------
+    R : float
+        value of Renyi divergence
+    '''
+    
+    #TODO: Verify this formula!!!
+
+    # Compute integral
+    P3 = np.linalg.inv(np.linalg.inv(P0) + np.linalg.inv(P1))
+    integral = (np.linalg.det(4.*P3)/np.linalg.det(P0+P1))**0.25
+
+    # Compute information gain
+    R = tau*(2. - 2.*integral)
+
+    return R
+
+
+
+
+###############################################################################
+# Greedy Sensor Tasking
+###############################################################################
+
+def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    # Load sensor and visibility data
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(visibility_file, 'rb')
+    data = pickle.load( pklFile )
+    visibility_dict = data[0]
+    pklFile.close()    
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    body_settings = environment_setup.get_default_body_settings(
+        ["Earth"],
+        "Earth",
+        "J2000")
+    bodies = environment_setup.create_system_of_bodies(body_settings)
+    
+    
+    
+    
+    
+    
+    return meas_dict
+
+
+
+
+
+
+
+###############################################################################
 # Sensors and Measurements
 ###############################################################################
 
