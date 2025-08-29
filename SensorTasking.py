@@ -55,12 +55,10 @@ def compute_gaussian_renyi_infogain(P0, P1):
     return R
 
 
-def reward_renyi_infogain(P0, P1, params):
+def reward_renyi_infogain(P0, P1, tau=1.):
     
-    # Set uniform priority
-    tau = 1.
-    
-    reward = compute_gaussian_renyi_infogain(P0, P1, tau)    
+    # Note that this is not proper formulation of tactical importance function
+    reward = tau*compute_gaussian_renyi_infogain(P0, P1)    
     
     return reward
 
@@ -152,7 +150,11 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
     
     # Loop over times
     tk_list = sorted(list(time_based_visibility.keys()))
+    t0_all = tk_list[0]
     for tk in tk_list:
+        
+        print('')
+        print('thrs from first meas', (tk-t0_all)/3600.)
         
         # Loop over sensors
         for sensor_id in time_based_visibility[tk]:
@@ -165,6 +167,8 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
             obj_id_list = time_based_visibility[tk][sensor_id]
             reward_list = []
             Pk_list = []
+            Kk_list = []
+            ybar_list = []
             for obj_id in obj_id_list:
                 
                 # Propagate state and covar
@@ -176,8 +180,12 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
                 state_params['Cd'] = rso_dict[obj_id]['Cd']
                 state_params['Cr'] = rso_dict[obj_id]['Cr']                
                 
-                tvec = np.array([t0, tk])
-                tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
+                if tk == t0:
+                    Xbar = Xo
+                    Pbar = Po
+                else:                
+                    tvec = np.array([t0, tk])
+                    tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
                 
                 # Update RSO dict with predicted state and covar
                 rso_dict[obj_id]['epoch_tdb'] = tk
@@ -210,25 +218,25 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
                 
                 # Compute reward and store with posterior covar
                 params = {}
-                reward = reward_fcn(Pbar, Pk, params)
+                reward = reward_fcn(Pbar, Pk)
                 
                 reward_list.append(reward)
                 Pk_list.append(Pk)
+                Kk_list.append(Kk)
+                ybar_list.append(ybar)
                 
-            # Find max ind of reward
-            max_ind = reward.index(max(reward))
-            
-            # Update RSO dict with updated covar of this object
+            # Find index of maximum reward
+            max_ind = reward_list.index(max(reward_list))
             max_obj_id = obj_id_list[max_ind]
-            max_Pk = Pk_list[max_ind]
-            rso_dict[max_obj_id]['covar'] = max_Pk
+            
+            print('sensor id', sensor_id)
+            print('selected obj', max_obj_id)
             
             # Retrieve truth data and simulate measurement for this time
             tk_truth = truth_dict[max_obj_id]['t_truth']
             Xk_truth = truth_dict[max_obj_id]['X_truth']
             truth_ind = list(tk_truth).index(tk)
             Xk_t = Xk_truth[truth_ind,:].reshape(6,1)
-            rso_dict[max_obj_id]['state'] = Xk_t
             
             # Compute measurement and add noise
             Yk = compute_measurement(tk, Xk_t, sensor_params, bodies)
@@ -237,18 +245,36 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
             for ii in range(len(meas_types)):
                 meas = meas_types[ii]
                 Yk[ii] += np.random.randn()*sigma_dict[meas]
-            
-            # Store in correct time order
-            if len(meas_dict[obj_id]['tk_list']) == 0:
-                meas_dict[obj_id]['tk_list'].append(tk)
-                meas_dict[obj_id]['Yk_list'].append(Yk)
-                meas_dict[obj_id]['sensor_id_list'].append(sensor_id)
                 
-            else:
-                ind = bisect.bisect_right(meas_dict[obj_id]['tk_list'], tk)
-                meas_dict[obj_id]['tk_list'].insert(ind, tk)
-                meas_dict[obj_id]['Yk_list'].insert(ind, Yk)
-                meas_dict[obj_id]['sensor_id_list'].insert(ind, sensor_id)
+            # Update RSO dict with updated state and covar of this object            
+            max_Pk = Pk_list[max_ind]
+            max_Kk = Kk_list[max_ind]
+            max_ybar = ybar_list[max_ind]
+            
+            rso_dict[obj_id]['state'] += np.dot(max_Kk, Yk-max_ybar)
+            rso_dict[max_obj_id]['covar'] = max_Pk
+            
+            print('mag xdiff', np.linalg.norm(np.dot(max_Kk, Yk-max_ybar)))
+            print('resids', Yk-max_ybar)
+            print('posterior covar', np.sqrt(np.diag(max_Pk)))
+            
+            
+            # Store measurement in correct time order
+            if max_obj_id not in meas_dict:
+                meas_dict[max_obj_id] = {}
+                meas_dict[max_obj_id]['tk_list'] = []
+                meas_dict[max_obj_id]['Yk_list'] = []
+                meas_dict[max_obj_id]['sensor_id_list'] = []            
+            
+            meas_dict[max_obj_id]['tk_list'].append(tk)
+            meas_dict[max_obj_id]['Yk_list'].append(Yk)
+            meas_dict[max_obj_id]['sensor_id_list'].append(sensor_id)
+            
+            
+            # if tk - t0_all > 100:
+            #     print(meas_dict)
+            #     mistake
+                
 
     
     return meas_dict
@@ -992,4 +1018,39 @@ def latlonht2ecef(lat, lon, ht):
     r_ecef = np.array([[rd*math.cos(lon)], [rd*math.sin(lon)], [rk]])
 
     return r_ecef
+
+
+###############################################################################
+# Verification
+###############################################################################
+
+def unit_test_infogain():
+    
+    
+    P0 = np.random.rand(6,6)
+    P0 = np.dot(P0, P0.T)
+    
+    print(np.linalg.eig(P0)[0])
+    
+    P1 = P0
+    
+    R = compute_gaussian_renyi_infogain(P0, P1)
+    
+    print(R)
+    
+    P1 = 0.1*P0
+    
+    R = compute_gaussian_renyi_infogain(P0, P1)
+    
+    print(R)
+    
+    
+    return
+
+
+if __name__ == '__main__':
+    
+    
+    unit_test_infogain()
+    
 

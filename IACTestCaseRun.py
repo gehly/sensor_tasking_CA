@@ -194,6 +194,23 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     return
 
 
+def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
+                                 truth_file, meas_file, reward_fcn):
+    
+    
+    meas_dict = sensor.greedy_sensor_tasking(rso_file, sensor_file,
+                                             visibility_file, truth_file, 
+                                             reward_fcn)
+    
+    # Save measurement data
+    pklFile = open( meas_file, 'wb' )
+    pickle.dump([meas_dict], pklFile, -1)
+    pklFile.close()
+    
+    
+    return
+
+
 def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, output_file):
     
     
@@ -519,15 +536,20 @@ if __name__ == '__main__':
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')
-    meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
+    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    output_file = os.path.join('data', 'baseline_output_batchPo_rgazel.pkl')
-    cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel.pkl')
+    cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
-    #                                truth_file, meas_file)    
+    #                                truth_file, meas_file)   
+    
+    
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+                                 truth_file, meas_file, reward_fcn)
     
     
     
@@ -543,7 +565,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
+    # process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     
