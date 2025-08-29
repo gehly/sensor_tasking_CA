@@ -5,12 +5,14 @@ import os
 import pandas as pd
 import pickle
 import copy
+import bisect
 
 
 from tudatpy.numerical_simulation import environment_setup
 
 # Import utility functions
 import TudatPropagator as prop
+import EstimationUtilities as est
 
 
 ###############################################################################
@@ -49,13 +51,22 @@ def compute_gaussian_renyi_infogain(P0, P1, tau=1.):
     return R
 
 
+def reward_renyi_infogain(P0, P1, params):
+    
+    # Set uniform priority
+    tau = 1.
+    
+    reward = compute_gaussian_renyi_infogain(P0, P1, tau)    
+    
+    return reward
 
 
 ###############################################################################
 # Greedy Sensor Tasking
 ###############################################################################
 
-def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
+def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file, 
+                          reward_fcn):
     
     # Load rso data
     pklFile = open(rso_file, 'rb')
@@ -81,10 +92,13 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
     
     
     # Basic setup for propagation
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)      
+    
     int_params = {}
     int_params['tudat_integrator'] = 'dp87'
     int_params['step'] = 10.
-    int_params['max_step'] = 60.
+    int_params['max_step'] = 1000.
     int_params['min_step'] = 1e-3
     int_params['rtol'] = 1e-12
     int_params['atol'] = 1e-12  
@@ -93,13 +107,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
     state_params['sph_deg'] = 20
     state_params['sph_ord'] = 20   
     state_params['central_bodies'] = ['Earth']
-    state_params['bodies_to_create'] = bodies_to_create
-    
-    body_settings = environment_setup.get_default_body_settings(
-        ["Earth"],
-        "Earth",
-        "J2000")
-    bodies = environment_setup.create_system_of_bodies(body_settings)
+    state_params['bodies_to_create'] = bodies_to_create    
     
     # Parse visibility dict to generate time based visibility dict
     time_based_visibility = {}
@@ -120,6 +128,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
                 
     # Unscented Transform parameters
     n = 6
+    alpha = 1e-4
     
     # Prior information about the distribution
     beta = 2.
@@ -145,9 +154,13 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
         for sensor_id in time_based_visibility[tk]:
             
             sensor_params = sensor_dict[sensor_id]
+            meas_types = sensor_params['meas_types']
+            sigma_dict = sensor_params['sigma_dict']
         
             # Loop over objects visible to this sensor
             obj_id_list = time_based_visibility[tk][sensor_id]
+            reward_list = []
+            Pk_list = []
             for obj_id in obj_id_list:
                 
                 # Propagate state and covar
@@ -160,7 +173,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
                 state_params['Cr'] = rso_dict[obj_id]['Cr']                
                 
                 tvec = np.array([t0, tk])
-                tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=1e-4)
+                tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
                 
                 # Update RSO dict with predicted state and covar
                 rso_dict[obj_id]['epoch_tdb'] = tk
@@ -174,7 +187,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
                 chi_diff = chi_bar - np.dot(Xbar, np.ones((1, (2*n+1))))
                 
                 # Computed measurements and covariance
-                gamma_til_k, Rk = unscented_meas(tk, chi_bar, sensor_params, bodies)
+                gamma_til_k, Rk = est.unscented_meas(tk, chi_bar, sensor_params, bodies)
                 ybar = np.dot(gamma_til_k, Wm.T)
                 ybar = np.reshape(ybar, (len(ybar), 1))
                 Y_diff = gamma_til_k - np.dot(ybar, np.ones((1, (2*n+1))))
@@ -191,21 +204,48 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
                 P2 = np.dot(Kk, np.dot(Rk, Kk.T))
                 Pk = np.dot(P1, np.dot(Pbar, P1.T)) + P2                
                 
-                # Compute Renyi divergence and store IG and posterior covar
-                IG_list
-                Pk_list
+                # Compute reward and store with posterior covar
+                params = {}
+                reward = reward_fcn(Pbar, Pk, params)
                 
+                reward_list.append(reward)
+                Pk_list.append(Pk)
                 
-                
-            # Find max ind of IG
+            # Find max ind of reward
+            max_ind = reward.index(max(reward))
             
             # Update RSO dict with updated covar of this object
+            max_obj_id = obj_id_list[max_ind]
+            max_Pk = Pk_list[max_ind]
+            rso_dict[max_obj_id]['covar'] = max_Pk
             
             # Retrieve truth data and simulate measurement for this time
-            meas_dict = 
-    
-    
-    
+            tk_truth = truth_dict[max_obj_id]['t_truth']
+            Xk_truth = truth_dict[max_obj_id]['X_truth']
+            truth_ind = list(tk_truth).index(tk)
+            Xk_t = Xk_truth[truth_ind,:].reshape(6,1)
+            rso_dict[max_obj_id]['state'] = Xk_t
+            
+            # Compute measurement and add noise
+            Yk = compute_measurement(tk, Xk_t, sensor_params, bodies)
+            
+            # Add noise
+            for ii in range(len(meas_types)):
+                meas = meas_types[ii]
+                Yk[ii] += np.random.randn()*sigma_dict[meas]
+            
+            # Store in correct time order
+            if len(meas_dict[obj_id]['tk_list']) == 0:
+                meas_dict[obj_id]['tk_list'].append(tk)
+                meas_dict[obj_id]['Yk_list'].append(Yk)
+                meas_dict[obj_id]['sensor_id_list'].append(sensor_id)
+                
+            else:
+                ind = bisect.bisect_right(meas_dict[obj_id]['tk_list'], tk)
+                meas_dict[obj_id]['tk_list'].insert(ind, tk)
+                meas_dict[obj_id]['Yk_list'].insert(ind, Yk)
+                meas_dict[obj_id]['sensor_id_list'].insert(ind, sensor_id)
+
     
     return meas_dict
 
