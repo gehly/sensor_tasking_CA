@@ -19,7 +19,7 @@ import EstimationUtilities as est
 # Reward Functions
 ###############################################################################
 
-def compute_gaussian_renyi_infogain(P0, P1, tau=1.):
+def compute_gaussian_renyi_infogain(P0, P1):
     '''
     This function computes the analytic Renyi divergence for a single Gaussian 
     component. It assumes no noise, therefore m0 = m1.
@@ -30,8 +30,6 @@ def compute_gaussian_renyi_infogain(P0, P1, tau=1.):
         prior covariance matrix
     P1 : nxn numpy array
         posterior covariance matrix
-    tau : float (optional)
-        tactical importance function value (priority) (default = 1.0)
 
     Returns
     ------
@@ -40,13 +38,19 @@ def compute_gaussian_renyi_infogain(P0, P1, tau=1.):
     '''
     
     #TODO: Verify this formula!!!
+    # R = tau*(2. - 2.*integral) - this is based on PHD and seems to be wrong
+    # Gehly dissertation Eq C.15 has a typo the number of objects should cancel
+    # in C.14 if it doesn't change during the measurement update
 
     # Compute integral
     P3 = np.linalg.inv(np.linalg.inv(P0) + np.linalg.inv(P1))
     integral = (np.linalg.det(4.*P3)/np.linalg.det(P0+P1))**0.25
 
     # Compute information gain
-    R = tau*(2. - 2.*integral)
+    # Use CPHD formula setting cardinality identically equal to 1
+    # Reference Ristic et al 2011 Eq 14 and Gehly dissertation Eq C.10 and C.25
+    
+    R = -2.*np.log(integral)
 
     return R
 
