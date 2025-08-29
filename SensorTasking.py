@@ -79,13 +79,130 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file):
     truth_dict = data[0]
     pklFile.close()
     
+    
+    # Basic setup for propagation
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 60.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12  
+    
+    state_params = {}    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
     body_settings = environment_setup.get_default_body_settings(
         ["Earth"],
         "Earth",
         "J2000")
     bodies = environment_setup.create_system_of_bodies(body_settings)
     
+    # Parse visibility dict to generate time based visibility dict
+    time_based_visibility = {}
+    for sensor_id in visibility_dict:
+        for obj_id in visibility_dict[sensor_id]:
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+            
+            for tk in tk_list:
+                if tk not in time_based_visibility:
+                    time_based_visibility[tk] = {}                    
+                    
+                if sensor_id not in time_based_visibility[tk]:
+                    time_based_visibility[tk][sensor_id] = []
+                
+                # Append object IDs visible to this sensor
+                time_based_visibility[tk][sensor_id].append(obj_id)
+                
+                
+    # Unscented Transform parameters
+    n = 6
     
+    # Prior information about the distribution
+    beta = 2.
+    kappa = 3. - float(n)
+    
+    # Compute sigma point weights    
+    lam = alpha**2.*(n + kappa) - n
+    gam = np.sqrt(n + lam)
+    Wm = 1./(2.*(n + lam)) * np.ones(2*n,)
+    Wc = Wm.copy()
+    Wm = np.insert(Wm, 0, lam/(n + lam))
+    Wc = np.insert(Wc, 0, lam/(n + lam) + (1 - alpha**2 + beta))
+    diagWc = np.diag(Wc)
+    
+    # Initialize output
+    meas_dict = {}
+    
+    # Loop over times
+    tk_list = sorted(list(time_based_visibility.keys()))
+    for tk in tk_list:
+        
+        # Loop over sensors
+        for sensor_id in time_based_visibility[tk]:
+            
+            sensor_params = sensor_dict[sensor_id]
+        
+            # Loop over objects visible to this sensor
+            obj_id_list = time_based_visibility[tk][sensor_id]
+            for obj_id in obj_id_list:
+                
+                # Propagate state and covar
+                t0 = rso_dict[obj_id]['epoch_tdb']
+                Xo = rso_dict[obj_id]['state']
+                Po = rso_dict[obj_id]['covar']
+                state_params['mass'] = rso_dict[obj_id]['mass']
+                state_params['area'] = rso_dict[obj_id]['area']
+                state_params['Cd'] = rso_dict[obj_id]['Cd']
+                state_params['Cr'] = rso_dict[obj_id]['Cr']                
+                
+                tvec = np.array([t0, tk])
+                tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=1e-4)
+                
+                # Update RSO dict with predicted state and covar
+                rso_dict[obj_id]['epoch_tdb'] = tk
+                rso_dict[obj_id]['state'] = Xbar
+                rso_dict[obj_id]['covar'] = Pbar               
+                
+                # Compute updated covar
+                sqP = np.linalg.cholesky(Pbar)
+                Xrep = np.tile(Xbar, (1, n))
+                chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
+                chi_diff = chi_bar - np.dot(Xbar, np.ones((1, (2*n+1))))
+                
+                # Computed measurements and covariance
+                gamma_til_k, Rk = unscented_meas(tk, chi_bar, sensor_params, bodies)
+                ybar = np.dot(gamma_til_k, Wm.T)
+                ybar = np.reshape(ybar, (len(ybar), 1))
+                Y_diff = gamma_til_k - np.dot(ybar, np.ones((1, (2*n+1))))
+                Pyy = np.dot(Y_diff, np.dot(diagWc, Y_diff.T)) + Rk
+                Pxy = np.dot(chi_diff,  np.dot(diagWc, Y_diff.T))
+                
+                # Kalman gain and measurement update
+                Kk = np.dot(Pxy, np.linalg.inv(Pyy))
+                
+                # Joseph form of covariance update
+                cholPbar = np.linalg.inv(np.linalg.cholesky(Pbar))
+                invPbar = np.dot(cholPbar.T, cholPbar)
+                P1 = (np.eye(n) - np.dot(np.dot(Kk, np.dot(Pyy, Kk.T)), invPbar))
+                P2 = np.dot(Kk, np.dot(Rk, Kk.T))
+                Pk = np.dot(P1, np.dot(Pbar, P1.T)) + P2                
+                
+                # Compute Renyi divergence and store IG and posterior covar
+                IG_list
+                Pk_list
+                
+                
+                
+            # Find max ind of IG
+            
+            # Update RSO dict with updated covar of this object
+            
+            # Retrieve truth data and simulate measurement for this time
+            meas_dict = 
     
     
     
