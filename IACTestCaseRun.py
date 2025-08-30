@@ -243,7 +243,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(0,1):      
+    for day in range(6,7):      
         
         # Load data if needed
         if day > 0:
@@ -266,7 +266,10 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         tk_check = sorted(list(visibility_dict_interval.keys()))
         print((tk_check[-1] - tk_check[0]))
         
-        # print(len(meas_dict))
+        print((tk_check[0] - t0_all))
+        print((tk_check[-1] - t0_all))
+        
+        print(len(meas_dict))
         # mistake
         
                 
