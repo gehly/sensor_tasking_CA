@@ -200,7 +200,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
     
     meas_dict = sensor.greedy_sensor_tasking(rso_file, sensor_file,
                                              visibility_file, truth_file, 
-                                             reward_fcn)
+                                             meas_file, reward_fcn)
     
     # Save measurement data
     pklFile = open( meas_file, 'wb' )

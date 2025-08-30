@@ -69,7 +69,7 @@ def reward_renyi_infogain(P0, P1, tau=1.):
 ###############################################################################
 
 def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file, 
-                          reward_fcn):
+                          meas_file, reward_fcn):
     
     # Load rso data
     pklFile = open(rso_file, 'rb')
@@ -152,7 +152,8 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
     
     # Loop over times
     tk_list = sorted(list(time_based_visibility.keys()))
-    t0_all = tk_list[0]
+    t0_all = rso_dict[52373]['epoch_tdb']
+    loop_count = 0
     for tk in tk_list:
         
         print('')
@@ -279,8 +280,13 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
             
         # if tk - t0_all > 12*3600:
         #     break
-                
-
+    
+        loop_count += 1
+        
+        if math.fmod(loop_count, 10000) == 0:
+            pklFile = open( meas_file, 'wb' )
+            pickle.dump([meas_dict], pklFile, -1)
+            pklFile.close()
     
     return meas_dict
 
