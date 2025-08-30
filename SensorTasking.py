@@ -68,31 +68,8 @@ def reward_renyi_infogain(P0, P1, tau=1.):
 # Greedy Sensor Tasking
 ###############################################################################
 
-def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file, 
-                          meas_file, reward_fcn):
-    
-    # Load rso data
-    pklFile = open(rso_file, 'rb')
-    data = pickle.load( pklFile )
-    rso_dict = data[0]
-    pklFile.close()
-    
-    # Load sensor and visibility data
-    pklFile = open(sensor_file, 'rb')
-    data = pickle.load( pklFile )
-    sensor_dict = data[0]
-    pklFile.close()
-    
-    pklFile = open(visibility_file, 'rb')
-    data = pickle.load( pklFile )
-    visibility_dict = data[0]
-    pklFile.close()    
-    
-    pklFile = open(truth_file, 'rb')
-    data = pickle.load( pklFile )
-    truth_dict = data[0]
-    pklFile.close()
-    
+def greedy_sensor_tasking(rso_dict, sensor_dict, time_based_visibility,
+                          truth_dict, meas_dict, reward_fcn):
     
     # Basic setup for propagation
     bodies_to_create = ['Sun', 'Earth', 'Moon']
@@ -112,23 +89,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
     state_params['central_bodies'] = ['Earth']
     state_params['bodies_to_create'] = bodies_to_create    
     
-    # Parse visibility dict to generate time based visibility dict
-    time_based_visibility = {}
-    for sensor_id in visibility_dict:
-        for obj_id in visibility_dict[sensor_id]:
-            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
-            
-            for tk in tk_list:
-                if tk not in time_based_visibility:
-                    time_based_visibility[tk] = {}                    
-                    
-                if sensor_id not in time_based_visibility[tk]:
-                    time_based_visibility[tk][sensor_id] = []
-                
-                # Append object IDs visible to this sensor
-                time_based_visibility[tk][sensor_id].append(obj_id)
-                
-                
+     
     # Filter setup
     n = 6
     alpha = 1e-2
@@ -146,18 +107,13 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
     Wm = np.insert(Wm, 0, lam/(n + lam))
     Wc = np.insert(Wc, 0, lam/(n + lam) + (1 - alpha**2 + beta))
     diagWc = np.diag(Wc)
-    
-    # Initialize output
-    meas_dict = {}
-    
+       
     # Loop over times
     tk_list = sorted(list(time_based_visibility.keys()))
-    t0_all = rso_dict[52373]['epoch_tdb']
-    loop_count = 0
     for tk in tk_list:
         
         print('')
-        print('thrs from first meas', (tk-t0_all)/3600.)
+        print('thrs from first meas', (tk-tk_list[0])/3600.)
         
         # Loop over sensors
         for sensor_id in time_based_visibility[tk]:
@@ -281,14 +237,12 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
         # if tk - t0_all > 12*3600:
         #     break
     
-        loop_count += 1
+        # loop_count += 1
         
-        if math.fmod(loop_count, 10000) == 0:
-            pklFile = open( meas_file, 'wb' )
-            pickle.dump([meas_dict], pklFile, -1)
-            pklFile.close()
-    
-    return meas_dict
+        
+        
+        
+    return meas_dict, rso_dict
 
 
 

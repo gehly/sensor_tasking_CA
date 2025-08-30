@@ -198,14 +198,90 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
                                  truth_file, meas_file, reward_fcn):
     
     
-    meas_dict = sensor.greedy_sensor_tasking(rso_file, sensor_file,
-                                             visibility_file, truth_file, 
-                                             meas_file, reward_fcn)
-    
-    # Save measurement data
-    pklFile = open( meas_file, 'wb' )
-    pickle.dump([meas_dict], pklFile, -1)
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
     pklFile.close()
+    
+    t0_all = rso_dict[52373]['epoch_tdb']
+    
+    # Load sensor and visibility data
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(visibility_file, 'rb')
+    data = pickle.load( pklFile )
+    visibility_dict = data[0]
+    pklFile.close()    
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    
+    
+    # Parse visibility dict to generate time based visibility dict
+    time_based_visibility = {}
+    for sensor_id in visibility_dict:
+        for obj_id in visibility_dict[sensor_id]:
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+            
+            for tk in tk_list:
+                if tk not in time_based_visibility:
+                    time_based_visibility[tk] = {}                    
+                    
+                if sensor_id not in time_based_visibility[tk]:
+                    time_based_visibility[tk][sensor_id] = []
+                
+                # Append object IDs visible to this sensor
+                time_based_visibility[tk][sensor_id].append(obj_id)
+    
+    
+    # Process data in 1 day increments
+    meas_dict = {}
+    for day in range(0,1):      
+        
+        # Load data if needed
+        if day > 0:
+            pklFile = open(meas_file, 'rb')
+            data = pickle.load( pklFile )
+            meas_dict = data[0]
+            rso_dict = data[1]
+            pklFile.close()
+        
+        # Reduce visibility dict to time window of interest
+        t0_interval = t0_all + day*86400.
+        tf_interval = t0_interval + 86400.
+        
+        visibility_dict_interval = {}
+        for tk in time_based_visibility:
+            if tk >= t0_interval and tk < tf_interval:
+                visibility_dict_interval[tk] = time_based_visibility[tk]
+                
+                
+        tk_check = sorted(list(visibility_dict_interval.keys()))
+        print((tk_check[-1] - tk_check[0]))
+        
+        # print(len(meas_dict))
+        # mistake
+        
+                
+        # Process data to generate measurements and updated state catalog
+        meas_dict, rso_dict = \
+            sensor.greedy_sensor_tasking(rso_dict, sensor_dict,
+                                         visibility_dict_interval, truth_dict, 
+                                         meas_dict, reward_fcn)
+    
+
+    
+        # Save measurement data
+        pklFile = open( meas_file, 'wb' )
+        pickle.dump([meas_dict, rso_dict], pklFile, -1)
+        pklFile.close()
     
     
     return
