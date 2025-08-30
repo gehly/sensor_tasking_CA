@@ -129,9 +129,10 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
                 time_based_visibility[tk][sensor_id].append(obj_id)
                 
                 
-    # Unscented Transform parameters
+    # Filter setup
     n = 6
-    alpha = 1e-4
+    alpha = 1e-2
+    Qeci = 1e-13*np.diag([1., 1., 1.])
     
     # Prior information about the distribution
     beta = 2.
@@ -256,7 +257,7 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
             max_Kk = Kk_list[max_ind]
             max_ybar = ybar_list[max_ind]
             
-            rso_dict[obj_id]['state'] += np.dot(max_Kk, Yk-max_ybar)
+            rso_dict[max_obj_id]['state'] += np.dot(max_Kk, Yk-max_ybar)
             rso_dict[max_obj_id]['covar'] = max_Pk
             
             print('mag xdiff', np.linalg.norm(np.dot(max_Kk, Yk-max_ybar)))
@@ -276,8 +277,8 @@ def greedy_sensor_tasking(rso_file, sensor_file, visibility_file, truth_file,
             meas_dict[max_obj_id]['sensor_id_list'].append(sensor_id)
             
             
-        if tk - t0_all > 12*3600:
-            break
+        # if tk - t0_all > 12*3600:
+        #     break
                 
 
     
