@@ -290,7 +290,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
     return
 
 
-def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, output_file):
+def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     
     
     # Load rso data
@@ -337,6 +337,7 @@ def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, outpu
     # Loop over objects
     output_dict = {}
     obj_id_list = list(meas_dict.keys())
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     for obj_id in obj_id_list:
         
         print('')
@@ -389,146 +390,146 @@ def filter_process_baseline_measurements(rso_file, sensor_file, meas_file, outpu
     return
 
 
-def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
-                                        output_file, window_hrs):
+# def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
+#                                         output_file, window_hrs):
     
     
-    # Load rso data
-    pklFile = open(rso_file, 'rb')
-    data = pickle.load( pklFile )
-    rso_dict = data[0]
-    pklFile.close()
+#     # Load rso data
+#     pklFile = open(rso_file, 'rb')
+#     data = pickle.load( pklFile )
+#     rso_dict = data[0]
+#     pklFile.close()
     
-    # Load sensor data
-    pklFile = open(sensor_file, 'rb')
-    data = pickle.load( pklFile )
-    sensor_dict = data[0]
-    pklFile.close()    
+#     # Load sensor data
+#     pklFile = open(sensor_file, 'rb')
+#     data = pickle.load( pklFile )
+#     sensor_dict = data[0]
+#     pklFile.close()    
     
-    # Load measurement data
-    pklFile = open(meas_file, 'rb')
-    data = pickle.load( pklFile )
-    meas_dict = data[0]
-    pklFile.close() 
+#     # Load measurement data
+#     pklFile = open(meas_file, 'rb')
+#     data = pickle.load( pklFile )
+#     meas_dict = data[0]
+#     pklFile.close() 
     
-    # Standard data
-    filter_params = {}
-    filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
-    filter_params['Qric'] = 0*np.diag([1., 1., 1.])
-    filter_params['alpha'] = 1e-2
-    filter_params['gap_seconds'] = 600.
+#     # Standard data
+#     filter_params = {}
+#     filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
+#     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
+#     filter_params['alpha'] = 1e-2
+#     filter_params['gap_seconds'] = 600.
     
     
-    int_params = {}
-    int_params['tudat_integrator'] = 'dp87'
-    int_params['step'] = 10.
-    int_params['max_step'] = 100.
-    int_params['min_step'] = 1e-3
-    int_params['rtol'] = 1e-12
-    int_params['atol'] = 1e-12 
+#     int_params = {}
+#     int_params['tudat_integrator'] = 'dp87'
+#     int_params['step'] = 10.
+#     int_params['max_step'] = 100.
+#     int_params['min_step'] = 1e-3
+#     int_params['rtol'] = 1e-12
+#     int_params['atol'] = 1e-12 
     
-    bodies_to_create = ['Sun', 'Earth', 'Moon']
-    bodies = prop.tudat_initialize_bodies(bodies_to_create)   
-    state_params = {}    
-    state_params['sph_deg'] = 20
-    state_params['sph_ord'] = 20   
-    state_params['central_bodies'] = ['Earth']
-    state_params['bodies_to_create'] = bodies_to_create
+#     bodies_to_create = ['Sun', 'Earth', 'Moon']
+#     bodies = prop.tudat_initialize_bodies(bodies_to_create)   
+#     state_params = {}    
+#     state_params['sph_deg'] = 20
+#     state_params['sph_ord'] = 20   
+#     state_params['central_bodies'] = ['Earth']
+#     state_params['bodies_to_create'] = bodies_to_create
     
-    # Loop over objects
-    output_dict = {}
-    full_output_dict = {}
-    obj_id_list = list(meas_dict.keys())
-    for obj_id in obj_id_list:
+#     # Loop over objects
+#     output_dict = {}
+#     full_output_dict = {}
+#     obj_id_list = list(meas_dict.keys())
+#     for obj_id in obj_id_list:
         
         
-        t0 = rso_dict[obj_id]['epoch_tdb']
-        output_dict[obj_id] = {}
-        full_output_dict[obj_id] = {}
+#         t0 = rso_dict[obj_id]['epoch_tdb']
+#         output_dict[obj_id] = {}
+#         full_output_dict[obj_id] = {}
         
-        # Retrieve state parameters
-        state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
-        state_params['state'] = rso_dict[obj_id]['state']
-        state_params['covar'] = rso_dict[obj_id]['covar']
-        state_params['mass'] = rso_dict[obj_id]['mass']
-        state_params['area'] = rso_dict[obj_id]['area']
-        state_params['Cd'] = rso_dict[obj_id]['Cd']
-        state_params['Cr'] = rso_dict[obj_id]['Cr']
+#         # Retrieve state parameters
+#         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
+#         state_params['state'] = rso_dict[obj_id]['state']
+#         state_params['covar'] = rso_dict[obj_id]['covar']
+#         state_params['mass'] = rso_dict[obj_id]['mass']
+#         state_params['area'] = rso_dict[obj_id]['area']
+#         state_params['Cd'] = rso_dict[obj_id]['Cd']
+#         state_params['Cr'] = rso_dict[obj_id]['Cr']
         
-        # if obj_id == 52373:
-        #     state_params['covar'] *= 100.
-        # else:
-        #     state_params['covar'] *= 0.01
+#         # if obj_id == 52373:
+#         #     state_params['covar'] *= 100.
+#         # else:
+#         #     state_params['covar'] *= 0.01
         
-        # Retrieve measurement data
-        # filter_meas_dict = meas_dict[obj_id]
+#         # Retrieve measurement data
+#         # filter_meas_dict = meas_dict[obj_id]
         
         
-        tk_list = meas_dict[obj_id]['tk_list']
-        Yk_list = meas_dict[obj_id]['Yk_list']
-        sensor_id_list = meas_dict[obj_id]['sensor_id_list']
+#         tk_list = meas_dict[obj_id]['tk_list']
+#         Yk_list = meas_dict[obj_id]['Yk_list']
+#         sensor_id_list = meas_dict[obj_id]['sensor_id_list']
         
-        # Loop over time in blocks
-        tk_max = 0
-        while tk_max < tk_list[-1]:
+#         # Loop over time in blocks
+#         tk_max = 0
+#         while tk_max < tk_list[-1]:
         
-            # Reduce time window
-            tk_max = t0 + window_hrs*3600.
+#             # Reduce time window
+#             tk_max = t0 + window_hrs*3600.
         
-            ind_0 = bisect.bisect_left(tk_list, t0)
-            ind_f = bisect.bisect_right(tk_list, tk_max)
+#             ind_0 = bisect.bisect_left(tk_list, t0)
+#             ind_f = bisect.bisect_right(tk_list, tk_max)
             
-            print('')
-            print('obj_id', obj_id)
-            print('t0', t0)
-            print('tk_max', tk_max)
-            print('dt_hrs', (tk_max-t0)/3600.)
-            print('ind_0', ind_0)
-            print('ind_f', ind_f)
+#             print('')
+#             print('obj_id', obj_id)
+#             print('t0', t0)
+#             print('tk_max', tk_max)
+#             print('dt_hrs', (tk_max-t0)/3600.)
+#             print('ind_0', ind_0)
+#             print('ind_f', ind_f)
             
-            # if tk_max > rso_dict[obj_id]['epoch_tdb'] + window_hrs*3600.:
-            #     mistake
-            
-        
-            filter_meas_dict = {}
-            filter_meas_dict['tk_list'] = tk_list[ind_0:ind_f]
-            filter_meas_dict['Yk_list'] = Yk_list[ind_0:ind_f]
-            filter_meas_dict['sensor_id_list'] = sensor_id_list[ind_0:ind_f]
-        
-            # Set tk_output in filter_params
-            filter_params['tk_output'] = list(np.arange(t0, tk_max+1., 10.))
+#             # if tk_max > rso_dict[obj_id]['epoch_tdb'] + window_hrs*3600.:
+#             #     mistake
             
         
-            # Run filter
-            filter_output, full_output = \
-                est.unscented_batch(state_params, filter_meas_dict,
-                                    sensor_dict, int_params,
-                                    filter_params, bodies)
+#             filter_meas_dict = {}
+#             filter_meas_dict['tk_list'] = tk_list[ind_0:ind_f]
+#             filter_meas_dict['Yk_list'] = Yk_list[ind_0:ind_f]
+#             filter_meas_dict['sensor_id_list'] = sensor_id_list[ind_0:ind_f]
         
-            output_dict[obj_id].update(filter_output)
-            full_output_dict[obj_id].update(full_output)
+#             # Set tk_output in filter_params
+#             filter_params['tk_output'] = list(np.arange(t0, tk_max+1., 10.))
             
-            # Update for next iteration
-            t0 += window_hrs*3600.
-            state_params['epoch_tdb'] = t0
-            state_params['state'] = full_output[t0]['state'] + np.array([[10.], [10.], [10.], [1e-2], [1e-2], [1e-2]])
-            state_params['covar'] = np.diag([1e6, 1e6, 1e6, 1, 1, 1])
-            # state_params['covar'] *= 100.
+        
+#             # Run filter
+#             filter_output, full_output = \
+#                 est.unscented_batch(state_params, filter_meas_dict,
+#                                     sensor_dict, int_params,
+#                                     filter_params, bodies)
+        
+#             output_dict[obj_id].update(filter_output)
+#             full_output_dict[obj_id].update(full_output)
             
-            # if tk_max > rso_dict[obj_id]['epoch_tdb'] + 20*3600.:
-            #     break
+#             # Update for next iteration
+#             t0 += window_hrs*3600.
+#             state_params['epoch_tdb'] = t0
+#             state_params['state'] = full_output[t0]['state'] + np.array([[10.], [10.], [10.], [1e-2], [1e-2], [1e-2]])
+#             state_params['covar'] = np.diag([1e6, 1e6, 1e6, 1, 1, 1])
+#             # state_params['covar'] *= 100.
+            
+#             # if tk_max > rso_dict[obj_id]['epoch_tdb'] + 20*3600.:
+#             #     break
         
         
-        # Save output
-        pklFile = open( output_file, 'wb' )
-        pickle.dump([output_dict, full_output_dict], pklFile, -1)
-        pklFile.close()
+#         # Save output
+#         pklFile = open( output_file, 'wb' )
+#         pickle.dump([output_dict, full_output_dict], pklFile, -1)
+#         pklFile.close()
     
     
-    return
+#     return
 
 
-def process_baseline_filter_output(output_file, truth_file):
+def process_filter_output(output_file, truth_file):
     
     pklFile = open(output_file, 'rb')
     data = pickle.load( pklFile )
@@ -548,25 +549,25 @@ def process_baseline_filter_output(output_file, truth_file):
     return
 
 
-def process_baseline_batch_output(output_file, truth_file):
+# def process_baseline_batch_output(output_file, truth_file):
     
-    pklFile = open(output_file, 'rb')
-    data = pickle.load( pklFile )
-    output_dict = data[0]
-    full_output_dict = data[1]
-    pklFile.close()
+#     pklFile = open(output_file, 'rb')
+#     data = pickle.load( pklFile )
+#     output_dict = data[0]
+#     full_output_dict = data[1]
+#     pklFile.close()
     
-    pklFile = open(truth_file, 'rb')
-    data = pickle.load( pklFile )
-    truth_dict = data[0]
-    pklFile.close()
+#     pklFile = open(truth_file, 'rb')
+#     data = pickle.load( pklFile )
+#     truth_dict = data[0]
+#     pklFile.close()
     
-    for obj_id in output_dict:
+#     for obj_id in output_dict:
         
-        analysis.compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id)
+#         analysis.compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id)
     
     
-    return
+#     return
 
 
 def process_baseline_cdm_output(rso_file, est_output_file, cdm_file):
@@ -618,7 +619,7 @@ if __name__ == '__main__':
     meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_all.pkl')
     cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
     
     
@@ -626,15 +627,15 @@ if __name__ == '__main__':
     #                                truth_file, meas_file)   
     
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
-                                 truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+    #                              truth_file, meas_file, reward_fcn)
     
     
     
-    # filter_process_baseline_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+    filter_process_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    # process_baseline_filter_output(output_file, truth_file)
+    # process_filter_output(output_file, truth_file)
 
 
     # window_hrs = 8.
