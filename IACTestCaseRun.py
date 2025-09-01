@@ -259,7 +259,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         
         visibility_dict_interval = {}
         for tk in time_based_visibility:
-            if tk >= t0_interval and tk < tf_interval:
+            if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
                 visibility_dict_interval[tk] = time_based_visibility[tk]
                 
                 
@@ -269,6 +269,8 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         print((tk_check[0] - t0_all))
         print((tk_check[-1] - t0_all))
         
+        print(tk_check[0:10])
+        print(len(tk_check))
         print(len(meas_dict))
         # mistake
         
@@ -614,22 +616,23 @@ if __name__ == '__main__':
     plt.close('all')
 
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
-    visibility_file = os.path.join('data', 'visibility_data.pkl')
-    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
-    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_secondaries.pkl')
-    cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
+    sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
+    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
+    visibility_file = os.path.join('data', 'visibility_data.pkl')  
+    
+    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_60sec.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_60sec.pkl')
+    cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_60sec.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     #                                truth_file, meas_file)   
     
     
-    # reward_fcn = sensor.reward_renyi_infogain
-    # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
-    #                              truth_file, meas_file, reward_fcn)
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+                                 truth_file, meas_file, reward_fcn)
     
     
     
@@ -645,7 +648,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    process_cdm_output(estimated_rso_file, output_file, cdm_file)
+    # process_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     
