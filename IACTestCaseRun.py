@@ -243,7 +243,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(6,7):      
+    for day in range(0,7):      
         
         # Load data if needed
         if day > 0:
@@ -255,11 +255,25 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         
         # Reduce visibility dict to time window of interest
         t0_interval = t0_all + day*86400.
-        tf_interval = t0_interval + 86400.
+        # tf_interval = t0_interval + 86400.
+        
+        tk_vis = np.array([])
+        for hr in range(0,24):
+            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 601., 60.)
+            tk_vis = np.append(tk_vis, tk_hr)
+            
+        print(tk_vis)
+        print(len(tk_vis))
         
         visibility_dict_interval = {}
-        for tk in time_based_visibility:
-            if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
+        for tk in sorted(list(time_based_visibility.keys())):
+            # if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
+            
+            # print(tk)
+            # print(tk_vis[0])
+            # mistake
+                
+            if tk in tk_vis:
                 visibility_dict_interval[tk] = time_based_visibility[tk]
                 
                 
@@ -269,7 +283,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         print((tk_check[0] - t0_all))
         print((tk_check[-1] - t0_all))
         
-        print(tk_check[0:10])
+        print(tk_check[0:20])
         print(len(tk_check))
         print(len(meas_dict))
         # mistake
@@ -620,14 +634,177 @@ def generate_case_summary(meas_file, output_file, truth_file):
     truth_dict = data[0]
     pklFile.close()
     
+    
     # Number of measurements
+    primary_id = 52373
     secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000,
                          97000, 98000, 99000]
-    nobj_detected = len(meas_dict)
-    nmeas_primary = len(meas_dict[52373]['tk_list'])
+    nobj_detected = len(meas_dict)    
+    nmeas_secondary = 0
+    nmeas_tertiary = 0
+    for obj_id in meas_dict:
+        if obj_id == primary_id:
+            nmeas_primary = len(meas_dict[obj_id]['tk_list'])
+        elif obj_id in secondary_id_list:
+            nmeas_secondary += len(meas_dict[obj_id]['tk_list'])
+        else:
+            nmeas_tertiary += len(meas_dict[obj_id]['tk_list'])
+            
     
     
     
+    
+    # Plot all 3D position errors
+    plt.figure()
+    obj_id_list = sorted(list(output_dict))
+    for obj_id in obj_id_list:
+        if obj_id == primary_id or obj_id in secondary_id_list:
+            continue
+        
+        thrs, pos3D = analysis.compute_errors(truth_dict, output_dict, obj_id, False)
+    
+        plt.semilogy(thrs, pos3D, color='0.8')
+        
+    for obj_id in secondary_id_list:
+        
+        thrs, pos3D = analysis.compute_errors(truth_dict, output_dict, obj_id, False)
+    
+        plt.semilogy(thrs, pos3D, color='b')
+        
+    
+    thrs, pos3D = analysis.compute_errors(truth_dict, output_dict, primary_id, False)
+
+    plt.semilogy(thrs, pos3D, color='r')
+    
+    plt.xlabel('Time [hours]')
+    plt.ylabel('3D Pos Error [m]')
+    plt.show()
+    
+    
+    print('')
+    print(meas_file)
+    print('Objects and Measurements')
+    print('Num Objects Detected', nobj_detected)
+    print('Num Meas Primary (Starlink)', nmeas_primary)
+    print('Num Meas Secondary', nmeas_secondary)
+    print('Num Meas Tertiary', nmeas_tertiary)
+
+    return
+
+
+def plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, truth_file):
+    
+    pklFile = open(baseline_cdm_file, 'rb')
+    data = pickle.load( pklFile )
+    baseline_cdm_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(greedy_cdm_file, 'rb')
+    data = pickle.load( pklFile )
+    greedy_cdm_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    # Set t0 for all objects
+    primary_id = 52373
+    t_truth = truth_dict[primary_id]['t_truth']
+    t0 = t_truth[0]
+    
+    TCA_dict = {}
+    TCA_dict[90000] = t0 + 30.*3600.
+    TCA_dict[91000] = t0 + 42.*3600.
+    TCA_dict[92000] = t0 + 60.*3600.
+    TCA_dict[93000] = t0 + 80.*3600.
+    TCA_dict[94000] = t0 + 97.*3600.
+    TCA_dict[95000] = t0 + 98.*3600.
+    TCA_dict[96000] = t0 + 99.*3600.
+    TCA_dict[97000] = t0 + 125.*3600.
+    TCA_dict[98000] = t0 + 145.*3600.
+    TCA_dict[99000] = t0 + 162.*3600.
+    
+    baseline_plot_data = {}
+    for cdm_id in baseline_cdm_dict:
+        
+        CDM_epoch = baseline_cdm_dict[cdm_id]['CDM_epoch']
+        secondary_id = baseline_cdm_dict[cdm_id]['secondary_id']
+        miss_distance = baseline_cdm_dict[cdm_id]['miss_distance']
+        Pc = baseline_cdm_dict[cdm_id]['Pc2D_Foster']
+        Uc = baseline_cdm_dict[cdm_id]['Uc2D']
+        
+        thrs = (CDM_epoch - t0)/3600.
+        
+        if secondary_id not in baseline_plot_data:
+            baseline_plot_data[secondary_id] = {}
+            baseline_plot_data[secondary_id]['thrs'] = []
+            baseline_plot_data[secondary_id]['miss_distance'] = []
+            baseline_plot_data[secondary_id]['Pc'] = []
+            baseline_plot_data[secondary_id]['Uc'] = []
+            
+        baseline_plot_data[secondary_id]['thrs'].append(thrs)
+        baseline_plot_data[secondary_id]['miss_distance'].append(miss_distance)
+        baseline_plot_data[secondary_id]['Pc'].append(Pc)
+        baseline_plot_data[secondary_id]['Uc'].append(Uc)
+        
+    
+    greedy_plot_data = {}
+    for cdm_id in greedy_cdm_dict:
+        
+        CDM_epoch = greedy_cdm_dict[cdm_id]['CDM_epoch']
+        secondary_id = greedy_cdm_dict[cdm_id]['secondary_id']
+        miss_distance = greedy_cdm_dict[cdm_id]['miss_distance']
+        Pc = greedy_cdm_dict[cdm_id]['Pc2D_Foster']
+        Uc = greedy_cdm_dict[cdm_id]['Uc2D']
+        
+        if CDM_epoch > (TCA_dict[secondary_id] - 3600.):
+            continue
+        
+        thrs = (CDM_epoch - t0)/3600.
+        
+        if secondary_id not in greedy_plot_data:
+            greedy_plot_data[secondary_id] = {}
+            greedy_plot_data[secondary_id]['thrs'] = []
+            greedy_plot_data[secondary_id]['miss_distance'] = []
+            greedy_plot_data[secondary_id]['Pc'] = []
+            greedy_plot_data[secondary_id]['Uc'] = []
+            
+        greedy_plot_data[secondary_id]['thrs'].append(thrs)
+        greedy_plot_data[secondary_id]['miss_distance'].append(miss_distance)
+        greedy_plot_data[secondary_id]['Pc'].append(Pc)
+        greedy_plot_data[secondary_id]['Uc'].append(Uc)      
+    
+    
+    for obj_id in baseline_plot_data:
+        
+        plt.figure()
+        
+        plt.subplot(3,1,1)
+        plt.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['miss_distance'], 'ko-', label='baseline')
+        plt.semilogy(greedy_plot_data[obj_id]['thrs'], greedy_plot_data[obj_id]['miss_distance'], 'ro-', label='greedy')
+        plt.ylabel('Miss Dist [m]')
+        plt.title('Object ' + str(obj_id))
+        plt.ylim([0.1, 20000])
+        plt.legend()
+        
+        plt.subplot(3,1,2)
+        plt.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['Pc'], 'ko-')
+        plt.semilogy(greedy_plot_data[obj_id]['thrs'], greedy_plot_data[obj_id]['Pc'], 'ro-')
+        plt.ylabel('Pc')
+        plt.ylim([1e-10, 2])
+        
+        plt.subplot(3,1,3)
+        plt.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['Uc'], 'ko-')
+        plt.semilogy(greedy_plot_data[obj_id]['thrs'], greedy_plot_data[obj_id]['Uc'], 'ro-')
+        plt.ylabel('Uc')
+        plt.xlabel('Time [hours]')
+        plt.ylim([1e-10, 2])
+        
+        
+    
+    plt.show()
     
     return
 
@@ -650,18 +827,28 @@ if __name__ == '__main__':
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     visibility_file = os.path.join('data', 'visibility_data.pkl')  
     
-    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_60sec.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_60sec_secondaries.pkl')
-    cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_60sec.pkl')
+    
+    # meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
+    # output_file = os.path.join('data', 'baseline_output_batchPo_rgazel.pkl')
+    # baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    
+    
+    # meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
+    # output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_all.pkl')
+    # greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
+    
+    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_60sec_limitvis.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_60sec_limitvis.pkl')
+    greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_60sec_limitvis.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     #                                truth_file, meas_file)   
     
     
-    # reward_fcn = sensor.reward_renyi_infogain
-    # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
-    #                              truth_file, meas_file, reward_fcn)
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+                                 truth_file, meas_file, reward_fcn)
     
     
     
@@ -679,9 +866,10 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, cdm_file)
 
-
+    # generate_case_summary(meas_file, output_file, truth_file)
     
-
+    
+    # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, truth_file)
 
 
 
