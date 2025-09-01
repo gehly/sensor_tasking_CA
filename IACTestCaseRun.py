@@ -603,6 +603,35 @@ def process_cdm_output(rso_file, est_output_file, cdm_file):
     return
 
 
+def generate_case_summary(meas_file, output_file, truth_file):
+    
+    pklFile = open(meas_file, 'rb')
+    data = pickle.load( pklFile )
+    meas_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(output_file, 'rb')
+    data = pickle.load( pklFile )
+    output_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    # Number of measurements
+    secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                         97000, 98000, 99000]
+    nobj_detected = len(meas_dict)
+    nmeas_primary = len(meas_dict[52373]['tk_list'])
+    
+    
+    
+    
+    return
+
+
 # have a function that generates a CDM following each measurement update and
 # maintain a dictionary of CDMs that can be easily looked up to see if an 
 # object is included - to be used for prioritization (dynamically updated CDM
@@ -648,7 +677,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    process_cdm_output(estimated_rso_file, output_file, cdm_file)
+    # process_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     

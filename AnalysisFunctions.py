@@ -9,7 +9,7 @@ import ConjunctionUtilities as conj
 import TudatPropagator as prop
 
 
-def compute_errors(truth_dict, output_dict, obj_id):
+def compute_errors(truth_dict, output_dict, obj_id, plot_flag=True):
     
     t_truth = truth_dict[obj_id]['t_truth']
     X_truth = truth_dict[obj_id]['X_truth']
@@ -41,6 +41,7 @@ def compute_errors(truth_dict, output_dict, obj_id):
     sig_r = np.zeros(len(filter_output),)
     sig_i = np.zeros(len(filter_output),)
     sig_c = np.zeros(len(filter_output),)
+    pos3D = np.zeros(len(filter_output),)
     
     for kk in range(len(tk_list)):
         tk = tk_list[kk]
@@ -51,6 +52,7 @@ def compute_errors(truth_dict, output_dict, obj_id):
                 
         X_true = X_truth[truth_ind,:].reshape(6,1)
         X_err[:,kk] = (X - X_true).flatten()
+        pos3D[kk] = np.linalg.norm(X_err[0:3,kk])
         sig_x[kk] = np.sqrt(P[0,0])
         sig_y[kk] = np.sqrt(P[1,1])
         sig_z[kk] = np.sqrt(P[2,2])
@@ -100,103 +102,104 @@ def compute_errors(truth_dict, output_dict, obj_id):
         
 
 
-    
-    # State Error Plots   
-    plt.figure()
-    plt.subplot(3,1,1)
-    plt.plot(thrs, X_err[0,:], 'k.')
-    plt.plot(thrs, 3*sig_x, 'k--')
-    plt.plot(thrs, -3*sig_x, 'k--')
-    plt.title('ECI Position Errors for Object ' + str(obj_id))
-    plt.ylabel('X Err [m]')
-    
-    plt.subplot(3,1,2)
-    plt.plot(thrs, X_err[1,:], 'k.')
-    plt.plot(thrs, 3*sig_y, 'k--')
-    plt.plot(thrs, -3*sig_y, 'k--')
-    plt.ylabel('Y Err [m]')
-    
-    plt.subplot(3,1,3)
-    plt.plot(thrs, X_err[2,:], 'k.')
-    plt.plot(thrs, 3*sig_z, 'k--')
-    plt.plot(thrs, -3*sig_z, 'k--')
-    plt.ylabel('Z Err [m]')
-
-    plt.xlabel('Time [hours]')
-    
-    plt.figure()
-    plt.subplot(3,1,1)
-    plt.plot(thrs, X_err[3,:], 'k.')
-    plt.plot(thrs, 3*sig_dx, 'k--')
-    plt.plot(thrs, -3*sig_dx, 'k--')
-    plt.title('ECI Velocity Errors for Object ' + str(obj_id))
-    plt.ylabel('dX Err [m/s]')
-    
-    plt.subplot(3,1,2)
-    plt.plot(thrs, X_err[4,:], 'k.')
-    plt.plot(thrs, 3*sig_dy, 'k--')
-    plt.plot(thrs, -3*sig_dy, 'k--')
-    plt.ylabel('dY Err [m/s]')
-    
-    plt.subplot(3,1,3)
-    plt.plot(thrs, X_err[5,:], 'k.')
-    plt.plot(thrs, 3*sig_dz, 'k--')
-    plt.plot(thrs, -3*sig_dz, 'k--')
-    plt.ylabel('dZ Err [m/s]')
-
-    plt.xlabel('Time [hours]')
-    
-    plt.figure()
-    plt.subplot(3,1,1)
-    plt.plot(thrs, X_err_ric[0,:], 'k.')
-    plt.plot(thrs, 3*sig_r, 'k--')
-    plt.plot(thrs, -3*sig_r, 'k--')
-    plt.title('RIC Position Errors for Object ' + str(obj_id))
-    plt.ylabel('Radial [m]')
-    
-    plt.subplot(3,1,2)
-    plt.plot(thrs, X_err_ric[1,:], 'k.')
-    plt.plot(thrs, 3*sig_i, 'k--')
-    plt.plot(thrs, -3*sig_i, 'k--')
-    plt.ylabel('In-Track [m]')
-    
-    plt.subplot(3,1,3)
-    plt.plot(thrs, X_err_ric[2,:], 'k.')
-    plt.plot(thrs, 3*sig_c, 'k--')
-    plt.plot(thrs, -3*sig_c, 'k--')
-    plt.ylabel('Cross-Track [m]')
-
-    plt.xlabel('Time [hours]')
-    
-
-    
-    # Residuals
-    plt.figure()
+    if plot_flag:
         
-    plt.subplot(3,1,1)
-    plt.plot(thrs, resids[0,:], 'k.')
-    plt.title('Measurement Residuals for Object ' + str(obj_id))
-    plt.ylabel('Range [m]')
+        # State Error Plots   
+        plt.figure()
+        plt.subplot(3,1,1)
+        plt.plot(thrs, X_err[0,:], 'k.')
+        plt.plot(thrs, 3*sig_x, 'k--')
+        plt.plot(thrs, -3*sig_x, 'k--')
+        plt.title('ECI Position Errors for Object ' + str(obj_id))
+        plt.ylabel('X Err [m]')
+        
+        plt.subplot(3,1,2)
+        plt.plot(thrs, X_err[1,:], 'k.')
+        plt.plot(thrs, 3*sig_y, 'k--')
+        plt.plot(thrs, -3*sig_y, 'k--')
+        plt.ylabel('Y Err [m]')
+        
+        plt.subplot(3,1,3)
+        plt.plot(thrs, X_err[2,:], 'k.')
+        plt.plot(thrs, 3*sig_z, 'k--')
+        plt.plot(thrs, -3*sig_z, 'k--')
+        plt.ylabel('Z Err [m]')
     
-    plt.subplot(3,1,2)
-    plt.plot(thrs, resids[1,:], 'k.')
-    plt.ylabel('Az [deg]')
+        plt.xlabel('Time [hours]')
+        
+        plt.figure()
+        plt.subplot(3,1,1)
+        plt.plot(thrs, X_err[3,:], 'k.')
+        plt.plot(thrs, 3*sig_dx, 'k--')
+        plt.plot(thrs, -3*sig_dx, 'k--')
+        plt.title('ECI Velocity Errors for Object ' + str(obj_id))
+        plt.ylabel('dX Err [m/s]')
+        
+        plt.subplot(3,1,2)
+        plt.plot(thrs, X_err[4,:], 'k.')
+        plt.plot(thrs, 3*sig_dy, 'k--')
+        plt.plot(thrs, -3*sig_dy, 'k--')
+        plt.ylabel('dY Err [m/s]')
+        
+        plt.subplot(3,1,3)
+        plt.plot(thrs, X_err[5,:], 'k.')
+        plt.plot(thrs, 3*sig_dz, 'k--')
+        plt.plot(thrs, -3*sig_dz, 'k--')
+        plt.ylabel('dZ Err [m/s]')
     
-    plt.subplot(3,1,3)
-    plt.plot(thrs, resids[2,:], 'k.')
-    plt.ylabel('El [deg]')
+        plt.xlabel('Time [hours]')
+        
+        plt.figure()
+        plt.subplot(3,1,1)
+        plt.plot(thrs, X_err_ric[0,:], 'k.')
+        plt.plot(thrs, 3*sig_r, 'k--')
+        plt.plot(thrs, -3*sig_r, 'k--')
+        plt.title('RIC Position Errors for Object ' + str(obj_id))
+        plt.ylabel('Radial [m]')
+        
+        plt.subplot(3,1,2)
+        plt.plot(thrs, X_err_ric[1,:], 'k.')
+        plt.plot(thrs, 3*sig_i, 'k--')
+        plt.plot(thrs, -3*sig_i, 'k--')
+        plt.ylabel('In-Track [m]')
+        
+        plt.subplot(3,1,3)
+        plt.plot(thrs, X_err_ric[2,:], 'k.')
+        plt.plot(thrs, 3*sig_c, 'k--')
+        plt.plot(thrs, -3*sig_c, 'k--')
+        plt.ylabel('Cross-Track [m]')
     
-    plt.xlabel('Time [hours]')
+        plt.xlabel('Time [hours]')
         
     
         
+        # Residuals
+        plt.figure()
+            
+        plt.subplot(3,1,1)
+        plt.plot(thrs, resids[0,:], 'k.')
+        plt.title('Measurement Residuals for Object ' + str(obj_id))
+        plt.ylabel('Range [m]')
+        
+        plt.subplot(3,1,2)
+        plt.plot(thrs, resids[1,:], 'k.')
+        plt.ylabel('Az [deg]')
+        
+        plt.subplot(3,1,3)
+        plt.plot(thrs, resids[2,:], 'k.')
+        plt.ylabel('El [deg]')
+        
+        plt.xlabel('Time [hours]')
+            
+        
+            
+        
+        plt.show()
     
-    plt.show()
     
     
     
-    
-    return
+    return thrs, pos3D
 
 
 def compute_batch_errors(truth_dict, output_dict, full_output_dict, obj_id):
@@ -671,21 +674,20 @@ def plot_cdm_data(cdm_file, rso_file):
     plt.legend()
     
     
-    
-    
-    
-    
     plt.show()
     
     
     return
 
 
+
+
+
 if __name__ == '__main__':
     
     plt.close('all')
     
-    cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
+    cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_60sec.pkl')
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     plot_cdm_data(cdm_file, rso_file)
 
