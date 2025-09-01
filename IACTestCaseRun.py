@@ -570,7 +570,7 @@ def process_filter_output(output_file, truth_file):
 #     return
 
 
-def process_baseline_cdm_output(rso_file, est_output_file, cdm_file):
+def process_cdm_output(rso_file, est_output_file, cdm_file):
     
     pklFile = open(est_output_file, 'rb')
     data = pickle.load( pklFile )
@@ -619,7 +619,7 @@ if __name__ == '__main__':
     meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
     truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
     estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_all.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_secondaries.pkl')
     cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
     
     
@@ -633,7 +633,7 @@ if __name__ == '__main__':
     
     
     
-    filter_process_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
+    # filter_process_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
     # process_filter_output(output_file, truth_file)
 
@@ -645,7 +645,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_baseline_cdm_output(estimated_rso_file, output_file, cdm_file)
+    process_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     
