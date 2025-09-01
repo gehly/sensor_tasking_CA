@@ -556,6 +556,11 @@ def risk_metric_evolution(cdm_file, output_dict, rso_dict, primary_id, tf, bodie
             
         else:
             TCA = TCA_dict[obj_id]
+            
+            # Skip this object if past TCA
+            if tk > (TCA-3600.):
+                continue
+            
             cdm_dict[cdm_id] = conj.compute_risk_metrics(rso_dict, primary_id,
                                                          obj_id, TCA, bodies)
             

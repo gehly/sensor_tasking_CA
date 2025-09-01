@@ -338,7 +338,7 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     
     # Loop over objects
     output_dict = {}
-    obj_id_list = list(meas_dict.keys())
+    obj_id_list = sorted(list(meas_dict.keys()))
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     for obj_id in obj_id_list:
         
@@ -622,7 +622,7 @@ if __name__ == '__main__':
     visibility_file = os.path.join('data', 'visibility_data.pkl')  
     
     meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_60sec.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_60sec.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_60sec_secondaries.pkl')
     cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_60sec.pkl')
     
     
@@ -630,9 +630,9 @@ if __name__ == '__main__':
     #                                truth_file, meas_file)   
     
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
-                                 truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+    #                              truth_file, meas_file, reward_fcn)
     
     
     
@@ -648,7 +648,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_cdm_output(estimated_rso_file, output_file, cdm_file)
+    process_cdm_output(estimated_rso_file, output_file, cdm_file)
 
 
     
