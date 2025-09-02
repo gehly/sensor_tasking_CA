@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(0,1):      
+    for day in range(6,7):      
         
         # Load data if needed
         if day > 0:
@@ -516,8 +516,8 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     
     # Loop over objects
     output_dict = {}
-    obj_id_list = sorted(list(meas_dict.keys()))
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
+    # obj_id_list = sorted(list(meas_dict.keys()))
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     for obj_id in obj_id_list:
         
         if obj_id not in meas_dict:
@@ -1010,7 +1010,7 @@ if __name__ == '__main__':
     
     
     meas_file = os.path.join('data', 'priority_basic_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
-    output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
+    output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
     greedy_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
