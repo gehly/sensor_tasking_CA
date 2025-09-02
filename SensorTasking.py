@@ -321,6 +321,7 @@ def greedy_sensor_tasking_multistep(rso_dict, sensor_dict, time_based_visibility
                 state_params['Cr'] = rso_dict[obj_id]['Cr']                
                 
                 if tk == t0:
+                    tbar = t0
                     Xbar = Xo
                     Pbar = Po
                 else:                
