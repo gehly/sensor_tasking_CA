@@ -365,8 +365,8 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     
     # Loop over objects
     output_dict = {}
-    # obj_id_list = sorted(list(meas_dict.keys()))
-    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
+    obj_id_list = sorted(list(meas_dict.keys()))
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     for obj_id in obj_id_list:
         
         if obj_id not in meas_dict:
@@ -854,7 +854,7 @@ if __name__ == '__main__':
     # greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
     
     meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
@@ -882,10 +882,10 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, greedy_cdm_file)
 
-    # generate_case_summary(meas_file, output_file, truth_file)
+    generate_case_summary(meas_file, output_file, truth_file)
     
     
-    plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, truth_file)
+    # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, truth_file)
 
 
 
