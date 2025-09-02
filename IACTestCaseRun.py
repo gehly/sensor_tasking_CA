@@ -997,7 +997,7 @@ if __name__ == '__main__':
     
     # meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
     # output_file = os.path.join('data', 'baseline_output_batchPo_rgazel.pkl')
-    # baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
     
     
     # meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
@@ -1011,7 +1011,7 @@ if __name__ == '__main__':
     
     meas_file = os.path.join('data', 'priority_basic_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
     output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
-    greedy_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -1022,9 +1022,9 @@ if __name__ == '__main__':
     # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
     #                              truth_file, meas_file, reward_fcn)
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-                                     truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+    #                                  truth_file, meas_file, reward_fcn)
     
     
     
@@ -1040,12 +1040,12 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_cdm_output(estimated_rso_file, output_file, greedy_cdm_file)
+    # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
     # generate_case_summary(meas_file, output_file, truth_file)
     
     
-    # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, truth_file)
+    plot_risk_metrics(baseline_cdm_file, priority_cdm_file, truth_file)
 
 
 
