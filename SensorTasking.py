@@ -245,7 +245,222 @@ def greedy_sensor_tasking(rso_dict, sensor_dict, time_based_visibility,
     return meas_dict, rso_dict
 
 
+def greedy_sensor_tasking_multistep(rso_dict, sensor_dict, time_based_visibility,
+                                    visibility_dict, truth_dict, meas_dict,
+                                    reward_fcn, tk_list_coarse):
+    
+    # Basic setup for propagation
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)      
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 1000.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12  
+    
+    state_params = {}    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create    
+    
+     
+    # Filter setup
+    n = 6
+    alpha = 1e-2
+    Qeci = 1e-13*np.diag([1., 1., 1.])
+    
+    # Prior information about the distribution
+    beta = 2.
+    kappa = 3. - float(n)
+    
+    # Compute sigma point weights    
+    lam = alpha**2.*(n + kappa) - n
+    gam = np.sqrt(n + lam)
+    Wm = 1./(2.*(n + lam)) * np.ones(2*n,)
+    Wc = Wm.copy()
+    Wm = np.insert(Wm, 0, lam/(n + lam))
+    Wc = np.insert(Wc, 0, lam/(n + lam) + (1 - alpha**2 + beta))
+    diagWc = np.diag(Wc)
+       
+    # Loop over times
+    tk_list_full = sorted(list(time_based_visibility.keys()))    
+    for tk in tk_list_coarse:
+        
+        print('')
+        print('thrs from first meas', (tk-tk_list_coarse[0])/3600.)
+        
+        # Loop over sensors
+        for sensor_id in time_based_visibility[tk]:
+            
+            sensor_params = sensor_dict[sensor_id]
+            meas_types = sensor_params['meas_types']
+            sigma_dict = sensor_params['sigma_dict']
+        
+            # Loop over objects visible to this sensor
+            obj_id_list = time_based_visibility[tk][sensor_id]
+            reward_list = []
+            Pk_list = []
+            Kk_list = []
+            ybar_list = []
+            tk_inner_loop_list = []
+            for obj_id in obj_id_list:
+                
+                # Propagate state and covar
+                t0 = rso_dict[obj_id]['epoch_tdb']
+                Xo = rso_dict[obj_id]['state']
+                Po = rso_dict[obj_id]['covar']
+                Po = conj.remediate_covariance(Po, 1e-12)[0]
+                
+                state_params['mass'] = rso_dict[obj_id]['mass']
+                state_params['area'] = rso_dict[obj_id]['area']
+                state_params['Cd'] = rso_dict[obj_id]['Cd']
+                state_params['Cr'] = rso_dict[obj_id]['Cr']                
+                
+                if tk == t0:
+                    Xbar = Xo
+                    Pbar = Po
+                else:                
+                    tvec = np.array([t0, tk])
+                    tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
+                
+                # Update RSO dict with predicted state and covar
+                Pbar = conj.remediate_covariance(Pbar, 1e-12)[0]
+                rso_dict[obj_id]['epoch_tdb'] = tk
+                rso_dict[obj_id]['state'] = Xbar
+                rso_dict[obj_id]['covar'] = Pbar               
+                
+                # Loop over next several measurements to compute update
+                obj_tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+                meas_ind0 = obj_tk_list.index(tk)
+                meas_indf = bisect.bisect_left(obj_tk_list, tk+59.)
+                tk_inner_loop = obj_tk_list[meas_ind0:meas_indf]
+                
+                t0_inner = tbar
+                Xk_inner = Xbar
+                Pk_inner = Pbar
+                
+                for tk_inner in tk_inner_loop:
+                    
+                    if tk_inner == t0_inner:
+                        Xbar_inner = Xk_inner
+                        Pbar_inner = Pk_inner
+                    else:
+                        tvec = np.array([t0_inner, tk_inner])
+                        tbar_inner, Xbar_inner, Pbar_inner = prop.propagate_state_and_covar(Xk_inner, Pk_inner, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
 
+                    # Compute updated covar
+                    Pbar_inner = conj.remediate_covariance(Pbar_inner, 1e-12)[0]
+                    sqP = np.linalg.cholesky(Pbar_inner)
+                    Xrep = np.tile(Xbar_inner, (1, n))
+                    chi_bar = np.concatenate((Xbar_inner, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
+                    chi_diff = chi_bar - np.dot(Xbar_inner, np.ones((1, (2*n+1))))
+                    
+                    # Computed measurements and covariance
+                    gamma_til_k, Rk = est.unscented_meas(tk_inner, chi_bar, sensor_params, bodies)
+                    ybar = np.dot(gamma_til_k, Wm.T)
+                    ybar = np.reshape(ybar, (len(ybar), 1))
+                    Y_diff = gamma_til_k - np.dot(ybar, np.ones((1, (2*n+1))))
+                    Pyy = np.dot(Y_diff, np.dot(diagWc, Y_diff.T)) + Rk
+                    Pxy = np.dot(chi_diff,  np.dot(diagWc, Y_diff.T))
+                    
+                    # Kalman gain and measurement update
+                    Kk = np.dot(Pxy, np.linalg.inv(Pyy))
+                    
+                    # Joseph form of covariance update
+                    cholPbar = np.linalg.inv(np.linalg.cholesky(Pbar_inner))
+                    invPbar = np.dot(cholPbar.T, cholPbar)
+                    P1 = (np.eye(n) - np.dot(np.dot(Kk, np.dot(Pyy, Kk.T)), invPbar))
+                    P2 = np.dot(Kk, np.dot(Rk, Kk.T))
+                    Pk_inner = np.dot(P1, np.dot(Pbar_inner, P1.T)) + P2  
+                    Pk_inner = conj.remediate_covariance(Pk_inner, 1e-12)[0]
+                    
+                    # Assume no measurement noise for state update
+                    t0_inner = tk_inner
+                    Xk_inner = Xbar_inner
+                    
+                
+                # Propagate covariance for comparison at last meas time
+                tvec = np.array([tbar, tk_inner])
+                tcomp, Xbar_comp, Pbar_comp = prop.propagate_state_and_covar(Xbar, Pbar, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
+                
+                # Compute reward and store with posterior covar
+                params = {}
+                reward = reward_fcn(Pbar_comp, Pk_inner)
+                
+                reward_list.append(reward)
+                Pk_list.append(Pk_inner)
+                Kk_list.append(Kk)
+                ybar_list.append(ybar)
+                tk_inner_loop_list.append(tk_inner_loop)
+                
+            # Find index of maximum reward
+            max_ind = reward_list.index(max(reward_list))
+            max_obj_id = obj_id_list[max_ind]
+            tk_inner_loop = tk_inner_loop_list[max_ind]
+            tk_truth = truth_dict[max_obj_id]['t_truth']
+            Xk_truth = truth_dict[max_obj_id]['X_truth']
+            
+            print('sensor id', sensor_id)
+            print('selected obj', max_obj_id)
+            
+            # Loop over inner times
+            for tk_inner in tk_inner_loop:
+            
+                # Retrieve truth data and simulate measurement for this time                
+                truth_ind = list(tk_truth).index(tk_inner)
+                Xk_t = Xk_truth[truth_ind,:].reshape(6,1)
+                
+                # Compute measurement and add noise
+                Yk = compute_measurement(tk_inner, Xk_t, sensor_params, bodies)
+                
+                # Add noise
+                for ii in range(len(meas_types)):
+                    meas = meas_types[ii]
+                    Yk[ii] += np.random.randn()*sigma_dict[meas]
+                    
+                # Store measurement in correct time order
+                if max_obj_id not in meas_dict:
+                    meas_dict[max_obj_id] = {}
+                    meas_dict[max_obj_id]['tk_list'] = []
+                    meas_dict[max_obj_id]['Yk_list'] = []
+                    meas_dict[max_obj_id]['sensor_id_list'] = []            
+                
+                meas_dict[max_obj_id]['tk_list'].append(tk_inner)
+                meas_dict[max_obj_id]['Yk_list'].append(Yk)
+                meas_dict[max_obj_id]['sensor_id_list'].append(sensor_id)
+                
+                
+            # Update RSO dict with updated state and covar of this object            
+            max_Pk = Pk_list[max_ind]
+            # max_Kk = Kk_list[max_ind]
+            # max_ybar = ybar_list[max_ind]
+            
+            # rso_dict[max_obj_id]['state'] += np.dot(max_Kk, Yk-max_ybar)
+            rso_dict[max_obj_id]['epoch_tdb'] = tk_inner
+            rso_dict[max_obj_id]['state'] = Xk_t   # Xk_truth[list(tk_truth).index(tk_inner)]
+            rso_dict[max_obj_id]['covar'] = max_Pk
+            
+            # print('mag xdiff', np.linalg.norm(np.dot(max_Kk, Yk-max_ybar)))
+            # print('resids', Yk-max_ybar)
+            print('posterior covar', np.sqrt(np.diag(max_Pk)))
+            
+            
+            
+            
+            
+        # if tk - t0_all > 12*3600:
+        #     break
+    
+        # loop_count += 1
+        
+        
+        
+        
+    return meas_dict, rso_dict
 
 
 

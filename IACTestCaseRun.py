@@ -258,13 +258,18 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         # tf_interval = t0_interval + 86400.
         
         tk_vis = np.array([])
+        tk_coarse = np.array([])
         for hr in range(0,24):
-            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 601., 10.)
+            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 10.)
             tk_vis = np.append(tk_vis, tk_hr)
+            
+            tk_hr2 = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 60.)
+            tk_coarse = np.append(tk_coarse, tk_hr2)
             
         print(tk_vis)
         print(len(tk_vis))
         
+        tk_list_coarse = []
         visibility_dict_interval = {}
         for tk in sorted(list(time_based_visibility.keys())):
             # if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
@@ -276,6 +281,9 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
             if tk in tk_vis:
                 visibility_dict_interval[tk] = time_based_visibility[tk]
                 
+                if tk in tk_coarse:
+                    tk_list_coarse.append(tk)
+                
                 
         tk_check = sorted(list(visibility_dict_interval.keys()))
         print((tk_check[-1] - tk_check[0]))
@@ -283,17 +291,20 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         print((tk_check[0] - t0_all))
         print((tk_check[-1] - t0_all))
         
-        print(tk_check[0:20])
-        print(len(tk_check))
-        print(len(meas_dict))
+        print('tk vis', tk_check[0:20])
+        print('tk coarse', tk_list_coarse[0:20])
+        print('tk vis', len(tk_check))
+        print('tk coarse', len(tk_list_coarse))
+        print('nobj', len(meas_dict))
         mistake
         
                 
         # Process data to generate measurements and updated state catalog
         meas_dict, rso_dict = \
-            sensor.greedy_sensor_tasking(rso_dict, sensor_dict,
-                                         visibility_dict_interval, truth_dict, 
-                                         meas_dict, reward_fcn)
+            sensor.greedy_sensor_tasking_multistep(rso_dict, sensor_dict,
+                                                   visibility_dict_interval, 
+                                                   visibility_dict, truth_dict, 
+                                                   meas_dict, reward_fcn, tk_list_coarse)
     
 
     
@@ -846,9 +857,9 @@ if __name__ == '__main__':
     #                                truth_file, meas_file)   
     
     
-    # reward_fcn = sensor.reward_renyi_infogain
-    # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
-    #                              truth_file, meas_file, reward_fcn)
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+                                 truth_file, meas_file, reward_fcn)
     
     
     
