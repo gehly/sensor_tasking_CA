@@ -319,6 +319,157 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
     return
 
 
+def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
+                                     truth_file, meas_file, reward_fcn):
+    
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    t0_all = rso_dict[52373]['epoch_tdb']
+    
+    # Load sensor and visibility data
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(visibility_file, 'rb')
+    data = pickle.load( pklFile )
+    visibility_dict = data[0]
+    pklFile.close()    
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    # Form initial target priorities
+    tif_base = 0.01
+    tif_high = 1.0
+    
+    primary_id = 52373
+    secondary_id_list = [90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000,
+                         98000, 99000]
+    
+    TCA_dict = {}
+    TCA_dict[90000] = t0_all + 30.*3600.
+    TCA_dict[91000] = t0_all + 42.*3600.
+    TCA_dict[92000] = t0_all + 60.*3600.
+    TCA_dict[93000] = t0_all + 80.*3600.
+    TCA_dict[94000] = t0_all + 97.*3600.
+    TCA_dict[95000] = t0_all + 98.*3600.
+    TCA_dict[96000] = t0_all + 99.*3600.
+    TCA_dict[97000] = t0_all + 125.*3600.
+    TCA_dict[98000] = t0_all + 145.*3600.
+    TCA_dict[99000] = t0_all + 162.*3600.
+    
+    for obj_id in rso_dict:
+        if obj_id == primary_id or obj_id in secondary_id_list:
+            rso_dict[obj_id]['tif'] = tif_high
+        else:
+            rso_dict[obj_id]['tif'] = tif_base    
+    
+    # Parse visibility dict to generate time based visibility dict
+    time_based_visibility = {}
+    for sensor_id in visibility_dict:
+        for obj_id in visibility_dict[sensor_id]:
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+            
+            for tk in tk_list:
+                if tk not in time_based_visibility:
+                    time_based_visibility[tk] = {}                    
+                    
+                if sensor_id not in time_based_visibility[tk]:
+                    time_based_visibility[tk][sensor_id] = []
+                
+                # Append object IDs visible to this sensor
+                time_based_visibility[tk][sensor_id].append(obj_id)
+    
+    
+    # Process data in 1 day increments
+    meas_dict = {}
+    for day in range(0,1):      
+        
+        # Load data if needed
+        if day > 0:
+            pklFile = open(meas_file, 'rb')
+            data = pickle.load(pklFile)
+            meas_dict = data[0]
+            rso_dict = data[1]
+            pklFile.close()
+        
+        # Reduce visibility dict to time window of interest
+        t0_interval = t0_all + day*86400.
+        # tf_interval = t0_interval + 86400.
+        
+        tk_vis = np.array([])
+        tk_coarse = np.array([])
+        for hr in range(0,24):
+            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 10.)
+            tk_vis = np.append(tk_vis, tk_hr)
+            
+            tk_hr2 = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 60.)
+            tk_coarse = np.append(tk_coarse, tk_hr2)
+            
+        print(tk_vis)
+        print(len(tk_vis))
+        
+        tk_list_coarse = []
+        visibility_dict_interval = {}
+        for tk in sorted(list(time_based_visibility.keys())):
+            # if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
+            
+            # print(tk)
+            # print(tk_vis[0])
+            # mistake
+                
+            if tk in tk_vis:
+                visibility_dict_interval[tk] = time_based_visibility[tk]
+                
+                if tk in tk_coarse:
+                    tk_list_coarse.append(tk)
+                
+                
+        tk_check = sorted(list(visibility_dict_interval.keys()))
+        print((tk_check[-1] - tk_check[0]))
+        
+        print((tk_check[0] - t0_all))
+        print((tk_check[-1] - t0_all))
+        
+        print('tk vis', tk_check[0:20])
+        print('tk coarse', tk_list_coarse[0:20])
+        print('tk vis', len(tk_check))
+        print('tk coarse', len(tk_list_coarse))
+        print('obj id list', sorted(list(meas_dict.keys())))
+        print('nobj', len(meas_dict))
+        
+        # mistake
+        
+                
+        # Process data to generate measurements and updated state catalog
+        meas_dict, rso_dict = \
+            sensor.greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict,
+                                                       visibility_dict_interval, 
+                                                       visibility_dict, truth_dict, 
+                                                       meas_dict, reward_fcn,
+                                                       tk_list_coarse, TCA_dict,
+                                                       tif_base)
+    
+
+    
+        # Save measurement data
+        pklFile = open( meas_file, 'wb' )
+        pickle.dump([meas_dict, rso_dict], pklFile, -1)
+        pklFile.close()
+    
+    
+    return
+
+
 def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     
     
@@ -846,16 +997,21 @@ if __name__ == '__main__':
     
     # meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
     # output_file = os.path.join('data', 'baseline_output_batchPo_rgazel.pkl')
-    baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    # baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
     
     
     # meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
     # output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_all.pkl')
     # greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
     
-    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
-    greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    # meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
+    # output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
+    # greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    
+    
+    meas_file = os.path.join('data', 'priority_basic_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
+    output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
+    greedy_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -865,6 +1021,10 @@ if __name__ == '__main__':
     # reward_fcn = sensor.reward_renyi_infogain
     # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
     #                              truth_file, meas_file, reward_fcn)
+    
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+                                     truth_file, meas_file, reward_fcn)
     
     
     
@@ -882,7 +1042,7 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, greedy_cdm_file)
 
-    generate_case_summary(meas_file, output_file, truth_file)
+    # generate_case_summary(meas_file, output_file, truth_file)
     
     
     # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, truth_file)
