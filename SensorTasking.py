@@ -485,7 +485,28 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     state_params['sph_deg'] = 20
     state_params['sph_ord'] = 20   
     state_params['central_bodies'] = ['Earth']
-    state_params['bodies_to_create'] = bodies_to_create   
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    # Re-initialize TIF values
+    primary_id = 52373
+    obj_id = primary_id
+    t0 = rso_dict[primary_id]['epoch_tdb']
+    secondary_id_list = sorted(list(TCA_dict.keys()))
+    rso_dict = compute_priorities(rso_dict, t0, obj_id, primary_id,
+                                  secondary_id_list, TCA_dict, tif_base, bodies)
+    
+    for obj_id in sorted(list(rso_dict.keys())):
+        print(obj_id, rso_dict[obj_id]['tif'])
+        
+    # test only
+    rso_dict = compute_priorities_urgency_update(rso_dict, t0, primary_id,
+                                                 secondary_id_list, TCA_dict, tif_base)
+        
+    for obj_id in sorted(list(rso_dict.keys())):
+        print(obj_id, rso_dict[obj_id]['tif'])
+    
+    
+    mistake
      
     # Filter setup
     n = 6
@@ -523,10 +544,16 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             obj_id_list = time_based_visibility[tk][sensor_id]
             reward_list = []
             Pk_list = []
+            Xk_list = []
             Kk_list = []
             ybar_list = []
             tk_inner_loop_list = []
+            Yk_inner_loop_list = []
             for obj_id in obj_id_list:
+                
+                # Truth data for this object
+                tk_truth = truth_dict[obj_id]['t_truth']
+                Xk_truth = truth_dict[obj_id]['X_truth']
                 
                 # Propagate state and covar
                 t0 = rso_dict[obj_id]['epoch_tdb']
@@ -562,7 +589,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                 t0_inner = tbar
                 Xk_inner = Xbar
                 Pk_inner = Pbar
-                
+                Yk_list = []
                 for tk_inner in tk_inner_loop:
                     
                     if tk_inner == t0_inner:
@@ -599,8 +626,28 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                     Pk_inner = conj.remediate_covariance(Pk_inner, 1e-12)[0]
                     
                     # Assume no measurement noise for state update
+                    # t0_inner = tk_inner
+                    # Xk_inner = Xbar_inner
+                    
+                    # Simulate measurement and store
+                    # Retrieve truth data and simulate measurement for this time                
+                    truth_ind = list(tk_truth).index(tk_inner)
+                    Xk_t = Xk_truth[truth_ind,:].reshape(6,1)
+                    
+                    # Compute measurement and add noise
+                    Yk = compute_measurement(tk_inner, Xk_t, sensor_params, bodies)
+                    for ii in range(len(meas_types)):
+                        meas = meas_types[ii]
+                        Yk[ii] += np.random.randn()*sigma_dict[meas]
+                        
+                    # Compute state update
+                    Xk_inner = Xbar_inner + np.dot(Kk, Yk-ybar)
+                    
+                    # Store measurments
+                    Yk_list.append(Yk)
+                    
+                    # Update for next iteration
                     t0_inner = tk_inner
-                    Xk_inner = Xbar_inner
                     
                 
                 # Propagate covariance for comparison at last meas time
@@ -612,63 +659,83 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                 reward = reward_fcn(Pbar_comp, Pk_inner, tif)
                 
                 reward_list.append(reward)
+                Xk_list.append(Xk_inner)
                 Pk_list.append(Pk_inner)
                 Kk_list.append(Kk)
                 ybar_list.append(ybar)
                 tk_inner_loop_list.append(tk_inner_loop)
+                Yk_inner_loop_list.append(Yk_list)
                 
             # Find index of maximum reward
             max_ind = reward_list.index(max(reward_list))
             max_obj_id = obj_id_list[max_ind]
             max_tif = rso_dict[max_obj_id]['tif']
             tk_inner_loop = tk_inner_loop_list[max_ind]
-            tk_truth = truth_dict[max_obj_id]['t_truth']
-            Xk_truth = truth_dict[max_obj_id]['X_truth']
+            Yk_inner_loop = Yk_inner_loop_list[max_ind]
+            
+            
+            # tk_truth = truth_dict[max_obj_id]['t_truth']
+            # Xk_truth = truth_dict[max_obj_id]['X_truth']
             
             print('sensor id', sensor_id)
             print('selected obj', max_obj_id)
             
-            # Loop over inner times
-            for tk_inner in tk_inner_loop:
+            # # Loop over inner times
+            # for tk_inner in tk_inner_loop:
             
-                # Retrieve truth data and simulate measurement for this time                
-                truth_ind = list(tk_truth).index(tk_inner)
-                Xk_t = Xk_truth[truth_ind,:].reshape(6,1)
+            #     # Retrieve truth data and simulate measurement for this time                
+            #     truth_ind = list(tk_truth).index(tk_inner)
+            #     Xk_t = Xk_truth[truth_ind,:].reshape(6,1)
                 
-                # Compute measurement and add noise
-                Yk = compute_measurement(tk_inner, Xk_t, sensor_params, bodies)
+            #     # Compute measurement and add noise
+            #     Yk = compute_measurement(tk_inner, Xk_t, sensor_params, bodies)
                 
-                # Add noise
-                for ii in range(len(meas_types)):
-                    meas = meas_types[ii]
-                    Yk[ii] += np.random.randn()*sigma_dict[meas]
+            #     # Add noise
+            #     for ii in range(len(meas_types)):
+            #         meas = meas_types[ii]
+            #         Yk[ii] += np.random.randn()*sigma_dict[meas]
                     
-                # Store measurement in correct time order
-                if max_obj_id not in meas_dict:
-                    meas_dict[max_obj_id] = {}
-                    meas_dict[max_obj_id]['tk_list'] = []
-                    meas_dict[max_obj_id]['Yk_list'] = []
-                    meas_dict[max_obj_id]['sensor_id_list'] = []    
-                    meas_dict[max_obj_id]['tif_list'] = []
+            #     # Store measurement in correct time order
+            #     if max_obj_id not in meas_dict:
+            #         meas_dict[max_obj_id] = {}
+            #         meas_dict[max_obj_id]['tk_list'] = []
+            #         meas_dict[max_obj_id]['Yk_list'] = []
+            #         meas_dict[max_obj_id]['sensor_id_list'] = []    
+            #         meas_dict[max_obj_id]['tif_list'] = []
                 
-                meas_dict[max_obj_id]['tk_list'].append(tk_inner)
-                meas_dict[max_obj_id]['Yk_list'].append(Yk)
-                meas_dict[max_obj_id]['sensor_id_list'].append(sensor_id)
-                meas_dict[max_obj_id]['tif_list'].append(max_tif)
+            #     meas_dict[max_obj_id]['tk_list'].append(tk_inner)
+            #     meas_dict[max_obj_id]['Yk_list'].append(Yk)
+            #     meas_dict[max_obj_id]['sensor_id_list'].append(sensor_id)
+            #     meas_dict[max_obj_id]['tif_list'].append(max_tif)
+            
+            # Store measurement data
+            if max_obj_id not in meas_dict:
+                meas_dict[max_obj_id] = {}
+                meas_dict[max_obj_id]['tk_list'] = []
+                meas_dict[max_obj_id]['Yk_list'] = []
+                meas_dict[max_obj_id]['sensor_id_list'] = []
+                meas_dict[max_obj_id]['tif_list'] = []
                 
+            meas_dict[max_obj_id]['tk_list'].extend(tk_inner_loop)
+            meas_dict[max_obj_id]['Yk_list'].extend(Yk_inner_loop)
+            meas_dict[max_obj_id]['sensor_id_list'].extend([sensor_id]*len(tk_inner_loop))
+            meas_dict[max_obj_id]['tif_list'].extend([max_tif]*len(tk_inner_loop))
                 
-            # Update RSO dict with updated state and covar of this object            
+            # Update RSO dict with updated state and covar of this object  
+            max_Xk = Xk_list[max_ind]
             max_Pk = Pk_list[max_ind]
             # max_Kk = Kk_list[max_ind]
             # max_ybar = ybar_list[max_ind]
             
             # rso_dict[max_obj_id]['state'] += np.dot(max_Kk, Yk-max_ybar)
-            rso_dict[max_obj_id]['epoch_tdb'] = tk_inner
-            rso_dict[max_obj_id]['state'] = Xk_t   # Xk_truth[list(tk_truth).index(tk_inner)]
+            rso_dict[max_obj_id]['epoch_tdb'] = tk_inner_loop[-1]
+            rso_dict[max_obj_id]['state'] = max_Xk    #Xk_t   # Xk_truth[list(tk_truth).index(tk_inner)]
             rso_dict[max_obj_id]['covar'] = max_Pk
             
             # Update TIF for this object (loop over all secondaries if primary)
-            rso_dict[max_obj_id]['tif'] = max_tif
+            rso_dict = compute_priorities(rso_dict, t0, max_obj_id, primary_id,
+                                          secondary_id_list, TCA_dict, tif_base,
+                                          bodies)
 
             # print('mag xdiff', np.linalg.norm(np.dot(max_Kk, Yk-max_ybar)))
             # print('resids', Yk-max_ybar)
@@ -676,12 +743,14 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             
             
         # Update TIF urgency
-        for secondary_id in TCA_dict:
-            TCA = TCA_dict[secondary_id]
-            T2TCA = TCA - tk
-            if T2TCA < 0.:
-                rso_dict[secondary_id]['tif'] = tif_base
-            
+        # for secondary_id in TCA_dict:
+        #     TCA = TCA_dict[secondary_id]
+        #     T2TCA = TCA - tk
+        #     if T2TCA < 0.:
+        #         rso_dict[secondary_id]['tif'] = tif_base
+        rso_dict = compute_priorities_urgency_update(rso_dict, tk, primary_id,
+                                                     secondary_id_list,
+                                                     TCA_dict, tif_base)   
             
             
         # if tk - t0_all > 12*3600:
@@ -694,6 +763,158 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
         
     return meas_dict, rso_dict
 
+
+def compute_priorities(rso_dict, tk, obj_id, primary_id, secondary_id_list,
+                       TCA_dict, tif_base, bodies):    
+    
+    # For primary object, check all secondaries not past TCA
+    if obj_id == primary_id:
+        
+        # Loop over all secondaries and recompute
+        prod = 1.
+        for secondary_id in secondary_id_list:
+            
+            # Skip this object if past TCA
+            TCA = TCA_dict[secondary_id]
+            if tk > TCA:
+                rso_dict[secondary_id]['tif_t2tca'] = 0.
+                rso_dict[secondary_id]['tif'] = tif_base
+                continue
+            
+            cdm_dict = conj.compute_risk_metrics(rso_dict, primary_id,
+                                                 secondary_id, TCA, bodies)
+            
+            Pc = cdm_dict['Pc2D_Foster']
+            Uc = cdm_dict['Uc2D']
+            
+            if Uc > 1e-4:
+                if Pc > 1e-4:
+                    tif_likelihood = 0.8
+                else:
+                    tif_likelihood = 1.
+            elif Uc > 1e-7:
+                tif_likelihood = 0.8
+            else:
+                tif_likelihood = tif_base
+                
+            t2tca = TCA - tk
+            if t2tca < 0.:
+                tif_t2tca = 0.
+            elif t2tca < 1.*86400:
+                tif_t2tca = 0.5
+            elif t2tca < 4.*86400:
+                tif_t2tca = 1.
+            else:
+                tif_t2tca = 0.5
+                
+            tif = max(tif_likelihood*tif_t2tca, tif_base)
+            rso_dict[secondary_id]['tif_likelihood'] = tif_likelihood
+            rso_dict[secondary_id]['tif_t2tca'] = tif_t2tca
+            rso_dict[secondary_id]['tif'] = tif
+            
+            prod *= (1. - tif)
+            
+            
+        # Compute primary TIF
+        rso_dict[primary_id]['tif_likelihood'] = 1.     # dummy value
+        rso_dict[primary_id]['tif_t2tca'] = 1.          # dummy value
+        rso_dict[primary_id]['tif'] = 1 - prod
+        
+    
+    # For secondary objects, compute risk metrics
+    elif obj_id in secondary_id_list:
+        TCA = TCA_dict[obj_id]
+        
+        # Skip this object if past TCA
+        if tk > TCA:
+            rso_dict[secondary_id]['tif_t2tca'] = 0.
+            rso_dict[secondary_id]['tif'] = tif_base
+        else:
+            cdm_dict = conj.compute_risk_metrics(rso_dict, primary_id, obj_id,
+                                             TCA, bodies)
+        
+            # Compute secondary TIF
+            Pc = cdm_dict['Pc2D_Foster']
+            Uc = cdm_dict['Uc2D']
+            
+            if Uc > 1e-4:
+                if Pc > 1e-4:
+                    tif_likelihood = 0.8
+                else:
+                    tif_likelihood = 1.
+            elif Uc > 1e-7:
+                tif_likelihood = 0.8
+            else:
+                tif_likelihood = tif_base
+                
+            t2tca = TCA - tk
+            if t2tca < 0.:
+                tif_t2tca = 0.
+            elif t2tca < 1.*86400:
+                tif_t2tca = 0.5
+            elif t2tca < 4.*86400:
+                tif_t2tca = 1.
+            else:
+                tif_t2tca = 0.5
+                
+            tif = max(tif_likelihood*tif_t2tca, tif_base)
+            rso_dict[secondary_id]['tif_likelihood'] = tif_likelihood
+            rso_dict[secondary_id]['tif_t2tca'] = tif_t2tca
+            rso_dict[secondary_id]['tif'] = tif
+        
+        
+        # Recompute primary TIF
+        prod = 1.
+        for secondary_id in secondary_id_list:
+            prod *= (1. - rso_dict[secondary_id]['tif'])
+            
+        rso_dict[primary_id]['tif_likelihood'] = 1.     # dummy value
+        rso_dict[primary_id]['tif_t2tca'] = 1.          # dummy value
+        rso_dict[primary_id]['tif'] = 1. - prod        
+        
+    else:
+        rso_dict[obj_id]['tif_likelihood'] = 0.         # dummy value
+        rso_dict[obj_id]['tif_t2tca'] = 0.              # dummy value
+        rso_dict[obj_id]['tif'] = tif_base
+    
+
+    return rso_dict
+
+
+def compute_priorities_urgency_update(rso_dict, tk, primary_id,
+                                      secondary_id_list, TCA_dict, tif_base):
+    
+    
+    # For secondary objects compute urgency TIF
+    prod = 1.
+    for secondary_id in secondary_id_list:
+        
+        TCA = TCA_dict[secondary_id]                            
+        t2tca = TCA - tk
+        tif_likelihood = rso_dict[secondary_id]['tif_likelihood']
+        
+        if t2tca < 0.:
+            tif_t2tca = 0.
+        elif t2tca < 1.*86400:
+            tif_t2tca = 0.5
+        elif t2tca < 4.*86400:
+            tif_t2tca = 1.
+        else:
+            tif_t2tca = 0.5
+            
+        tif = max(tif_likelihood*tif_t2tca, tif_base)
+        rso_dict[secondary_id]['tif_t2tca'] = tif_t2tca
+        rso_dict[secondary_id]['tif'] = tif        
+        
+        # Recompute primary TIF
+        prod *= (1. - rso_dict[secondary_id]['tif'])
+            
+    rso_dict[primary_id]['tif_likelihood'] = 1.     # dummy value
+    rso_dict[primary_id]['tif_t2tca'] = 1.          # dummy value
+    rso_dict[primary_id]['tif'] = 1. - prod
+       
+    
+    return rso_dict
 
 
 ###############################################################################
