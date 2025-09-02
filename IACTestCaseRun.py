@@ -259,7 +259,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         
         tk_vis = np.array([])
         for hr in range(0,24):
-            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 601., 60.)
+            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 601., 10.)
             tk_vis = np.append(tk_vis, tk_hr)
             
         print(tk_vis)
@@ -286,7 +286,7 @@ def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
         print(tk_check[0:20])
         print(len(tk_check))
         print(len(meas_dict))
-        # mistake
+        mistake
         
                 
         # Process data to generate measurements and updated state catalog
@@ -352,8 +352,8 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     
     # Loop over objects
     output_dict = {}
-    obj_id_list = sorted(list(meas_dict.keys()))
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
+    # obj_id_list = sorted(list(meas_dict.keys()))
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     for obj_id in obj_id_list:
         
         print('')
@@ -830,25 +830,25 @@ if __name__ == '__main__':
     
     # meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
     # output_file = os.path.join('data', 'baseline_output_batchPo_rgazel.pkl')
-    # baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
     
     
     # meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
     # output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_all.pkl')
     # greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel.pkl')
     
-    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_60sec_limitvis.pkl')
-    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_60sec_limitvis.pkl')
-    greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_60sec_limitvis.pkl')
+    meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel_10sec_limitvis.pkl')
+    output_file = os.path.join('data', 'greedy_renyi_output_batchPo_rgazel_10sec_limitvis_secondaries.pkl')
+    greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_10sec_limitvis.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     #                                truth_file, meas_file)   
     
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
-                                 truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
+    #                              truth_file, meas_file, reward_fcn)
     
     
     
@@ -864,7 +864,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_cdm_output(estimated_rso_file, output_file, cdm_file)
+    # process_cdm_output(estimated_rso_file, output_file, greedy_cdm_file)
 
     # generate_case_summary(meas_file, output_file, truth_file)
     
