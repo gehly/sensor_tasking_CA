@@ -367,11 +367,11 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     TCA_dict[98000] = t0_all + 145.*3600.
     TCA_dict[99000] = t0_all + 162.*3600.
     
-    for obj_id in rso_dict:
-        if obj_id == primary_id or obj_id in secondary_id_list:
-            rso_dict[obj_id]['tif'] = tif_high
-        else:
-            rso_dict[obj_id]['tif'] = tif_base    
+    # for obj_id in rso_dict:
+    #     if obj_id == primary_id or obj_id in secondary_id_list:
+    #         rso_dict[obj_id]['tif'] = tif_high
+    #     else:
+    #         rso_dict[obj_id]['tif'] = tif_base    
     
     # Parse visibility dict to generate time based visibility dict
     time_based_visibility = {}
@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(3,4):      
+    for day in range(1,2):      
         
         # Load data if needed
         if day > 0:
@@ -1144,9 +1144,9 @@ if __name__ == '__main__':
     # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
     #                              truth_file, meas_file, reward_fcn)
     
-    # reward_fcn = sensor.reward_renyi_infogain
-    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-    #                                  truth_file, meas_file, reward_fcn)
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+                                     truth_file, meas_file, reward_fcn)
     
     
     
@@ -1155,7 +1155,7 @@ if __name__ == '__main__':
     # process_filter_output(output_file, truth_file)
     
     
-    filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
+    # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
 
 
     # window_hrs = 8.

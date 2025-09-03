@@ -499,6 +499,9 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     for obj_id in sorted(list(rso_dict.keys())):
         print(obj_id, rso_dict[obj_id]['tif'])
         
+        
+    # mistake
+        
     # # test only
     # rso_dict = compute_priorities_urgency_update(rso_dict, t0, primary_id,
     #                                              secondary_id_list, TCA_dict, tif_base)
