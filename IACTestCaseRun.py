@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(0,1):      
+    for day in range(1,2):      
         
         # Load data if needed
         if day > 0:
@@ -447,7 +447,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
         print('obj id list', sorted(list(meas_dict.keys())))
         print('nobj', len(meas_dict))
         
-        
+        # mistake
                 
         # Process data to generate measurements and updated state catalog
         meas_dict, rso_dict = \
@@ -1143,9 +1143,9 @@ if __name__ == '__main__':
     # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
     #                              truth_file, meas_file, reward_fcn)
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-                                     truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+    #                                  truth_file, meas_file, reward_fcn)
     
     
     
