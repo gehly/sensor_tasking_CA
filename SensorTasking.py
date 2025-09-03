@@ -498,15 +498,13 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     for obj_id in sorted(list(rso_dict.keys())):
         print(obj_id, rso_dict[obj_id]['tif'])
         
-    # test only
-    rso_dict = compute_priorities_urgency_update(rso_dict, t0, primary_id,
-                                                 secondary_id_list, TCA_dict, tif_base)
+    # # test only
+    # rso_dict = compute_priorities_urgency_update(rso_dict, t0, primary_id,
+    #                                              secondary_id_list, TCA_dict, tif_base)
         
-    for obj_id in sorted(list(rso_dict.keys())):
-        print(obj_id, rso_dict[obj_id]['tif'])
+    # for obj_id in sorted(list(rso_dict.keys())):
+    #     print(obj_id, rso_dict[obj_id]['tif'])
     
-    
-    mistake
      
     # Filter setup
     n = 6
@@ -530,8 +528,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     tk_list_full = sorted(list(time_based_visibility.keys()))    
     for tk in tk_list_coarse:
         
-        print('')
-        print('thrs from first meas', (tk-tk_list_coarse[0])/3600.)
+        
         
         # Loop over sensors
         for sensor_id in time_based_visibility[tk]:
@@ -677,8 +674,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             # tk_truth = truth_dict[max_obj_id]['t_truth']
             # Xk_truth = truth_dict[max_obj_id]['X_truth']
             
-            print('sensor id', sensor_id)
-            print('selected obj', max_obj_id)
+            
             
             # # Loop over inner times
             # for tk_inner in tk_inner_loop:
@@ -739,6 +735,10 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
 
             # print('mag xdiff', np.linalg.norm(np.dot(max_Kk, Yk-max_ybar)))
             # print('resids', Yk-max_ybar)
+            print('')
+            print('thrs from first meas', (tk-tk_list_coarse[0])/3600.)
+            print('sensor id', sensor_id)
+            print('selected obj', max_obj_id)
             print('posterior covar', np.sqrt(np.diag(max_Pk)))
             
             
@@ -827,8 +827,8 @@ def compute_priorities(rso_dict, tk, obj_id, primary_id, secondary_id_list,
         
         # Skip this object if past TCA
         if tk > TCA:
-            rso_dict[secondary_id]['tif_t2tca'] = 0.
-            rso_dict[secondary_id]['tif'] = tif_base
+            rso_dict[obj_id]['tif_t2tca'] = 0.
+            rso_dict[obj_id]['tif'] = tif_base
         else:
             cdm_dict = conj.compute_risk_metrics(rso_dict, primary_id, obj_id,
                                              TCA, bodies)
@@ -858,9 +858,9 @@ def compute_priorities(rso_dict, tk, obj_id, primary_id, secondary_id_list,
                 tif_t2tca = 0.5
                 
             tif = max(tif_likelihood*tif_t2tca, tif_base)
-            rso_dict[secondary_id]['tif_likelihood'] = tif_likelihood
-            rso_dict[secondary_id]['tif_t2tca'] = tif_t2tca
-            rso_dict[secondary_id]['tif'] = tif
+            rso_dict[obj_id]['tif_likelihood'] = tif_likelihood
+            rso_dict[obj_id]['tif_t2tca'] = tif_t2tca
+            rso_dict[obj_id]['tif'] = tif
         
         
         # Recompute primary TIF
