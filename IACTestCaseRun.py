@@ -573,6 +573,122 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     return
 
 
+def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file):
+    
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    # Load sensor data
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()    
+    
+    # Load measurement data
+    pklFile = open(meas_file, 'rb')
+    data = pickle.load( pklFile )
+    meas_dict = data[0]
+    rso_dict2 = data[1]
+    pklFile.close() 
+    
+    # Standard data
+    filter_params = {}
+    filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
+    filter_params['Qric'] = 0*np.diag([1., 1., 1.])
+    filter_params['alpha'] = 1e-2
+    filter_params['gap_seconds'] = 900.
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 100.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12 
+    
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)   
+    state_params = {}    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    # Loop over objects
+    output_dict = {}
+    obj_id_list = sorted(list(meas_dict.keys()))
+    for obj_id in obj_id_list:
+        
+        if obj_id not in meas_dict:
+            continue
+        
+        print('')
+        print('obj_id', obj_id)
+        t0 = rso_dict[obj_id]['epoch_tdb']
+        
+        # Retrieve state parameters
+        state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
+        state_params['state'] = rso_dict[obj_id]['state']
+        state_params['covar'] = rso_dict[obj_id]['covar']
+        state_params['mass'] = rso_dict[obj_id]['mass']
+        state_params['area'] = rso_dict[obj_id]['area']
+        state_params['Cd'] = rso_dict[obj_id]['Cd']
+        state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+        # if obj_id == 52373:
+        #     state_params['covar'] *= 100.
+        # else:
+        #     state_params['covar'] *= 0.01
+        
+        # Retrieve measurement data
+        # filter_meas_dict = meas_dict[obj_id]
+        
+        # Reduce time window
+        tk_max = t0 + 7.*24.*3600.
+        tk_list = meas_dict[obj_id]['tk_list']
+        Yk_list = meas_dict[obj_id]['Yk_list']
+        sensor_id_list = meas_dict[obj_id]['sensor_id_list']
+        ind = bisect.bisect_right(tk_list, tk_max)
+        
+        filter_meas_dict = {}
+        filter_meas_dict['tk_list'] = tk_list[0:ind]
+        filter_meas_dict['Yk_list'] = Yk_list[0:ind]
+        filter_meas_dict['sensor_id_list'] = sensor_id_list[0:ind]
+        
+        
+        # Run filter
+        filter_output = est.ukf2(state_params, filter_meas_dict, sensor_dict,
+                                 int_params, filter_params, bodies)
+        
+        output_dict[obj_id] = filter_output
+        
+        tk_filter = sorted(list(filter_output.keys()))
+        tf_filter = tk_filter[-1]
+        Xf_filter = filter_output[tf_filter]['state']
+        Pf_filter = filter_output[tf_filter]['covar']
+        
+        rso_dict2[obj_id]['epoch_tdb'] = tf_filter
+        rso_dict2[obj_id]['state'] = Xf_filter
+        rso_dict2[obj_id]['covar'] = Pf_filter
+        
+        
+    # Save output
+    pklFile = open( output_file, 'wb' )
+    pickle.dump([output_dict], pklFile, -1)
+    pklFile.close()
+    
+    pklFile = open( meas_file, 'wb' )
+    pickle.dump([meas_dict, rso_dict2], pklFile, -1)
+    pklFile.close()
+    
+    
+    return
+
+
 # def batch_process_baseline_measurements(rso_file, sensor_file, meas_file,
 #                                         output_file, window_hrs):
     
