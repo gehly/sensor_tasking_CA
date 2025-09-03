@@ -490,7 +490,8 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # Re-initialize TIF values
     primary_id = 52373
     obj_id = primary_id
-    t0 = rso_dict[primary_id]['epoch_tdb']
+    # t0 = rso_dict[primary_id]['epoch_tdb']
+    t0 = tk_list_coarse[0]
     secondary_id_list = sorted(list(TCA_dict.keys()))
     rso_dict = compute_priorities(rso_dict, t0, obj_id, primary_id,
                                   secondary_id_list, TCA_dict, tif_base, bodies)
