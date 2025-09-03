@@ -1013,8 +1013,8 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep2.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
@@ -1036,7 +1036,10 @@ if __name__ == '__main__':
     
     # filter_process_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    process_filter_output(output_file, truth_file)
+    # process_filter_output(output_file, truth_file)
+    
+    
+    filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
 
 
     # window_hrs = 8.
