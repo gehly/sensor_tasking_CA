@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(1,2):      
+    for day in range(2,3):      
         
         # Load data if needed
         if day > 0:
@@ -488,7 +488,15 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file):
     pklFile = open(meas_file, 'rb')
     data = pickle.load( pklFile )
     meas_dict = data[0]
+    # rso_dict2 = data[1]
     pklFile.close() 
+    
+    # for obj_id in rso_dict2:
+    #     print('')
+    #     print(obj_id)
+    #     print(rso_dict2[obj_id]['state'])
+        
+    # mistake
     
     # Standard data
     filter_params = {}
@@ -1151,7 +1159,7 @@ if __name__ == '__main__':
     
     # filter_process_measurements(estimated_rso_file, sensor_file, meas_file, output_file)
 
-    # process_filter_output(output_file, truth_file)
+    process_filter_output(output_file, truth_file)
     
     
     # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
