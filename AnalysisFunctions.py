@@ -7,6 +7,7 @@ import math
 
 import ConjunctionUtilities as conj
 import TudatPropagator as prop
+import SensorTasking as sensor
 
 
 def compute_errors(truth_dict, output_dict, obj_id, plot_flag=True):
@@ -680,6 +681,123 @@ def plot_cdm_data(cdm_file, rso_file):
     return
 
 
+def analyze_bad_object(meas_file, truth_file, estimated_rso_file, 
+                       visibility_file, sensor_file, obj_id_list):
+    
+    pklFile = open(meas_file, 'rb')
+    data = pickle.load( pklFile )
+    meas_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(estimated_rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(visibility_file, 'rb')
+    data = pickle.load( pklFile )
+    visibility_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(sensor_file, 'rb')
+    data = pickle.load( pklFile )
+    sensor_dict = data[0]
+    pklFile.close()
+    
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)    
+    
+    state_params = {}    
+    state_params['sph_deg'] = 20
+    state_params['sph_ord'] = 20   
+    state_params['central_bodies'] = ['Earth']
+    state_params['bodies_to_create'] = bodies_to_create
+    
+    int_params = {}
+    int_params['tudat_integrator'] = 'dp87'
+    int_params['step'] = 10.
+    int_params['max_step'] = 100.
+    int_params['min_step'] = 1e-3
+    int_params['rtol'] = 1e-12
+    int_params['atol'] = 1e-12 
+    
+    
+    for obj_id in obj_id_list:
+        
+        # print(meas_dict[obj_id])
+        
+        tk_list = meas_dict[obj_id]['tk_list']
+        Yk_list = meas_dict[obj_id]['Yk_list']
+        sensor_id_list = meas_dict[obj_id]['sensor_id_list']
+        
+        t0 = rso_dict[obj_id]['epoch_tdb']
+        Xo = rso_dict[obj_id]['state']
+        state_params['mass'] = rso_dict[obj_id]['mass']
+        state_params['area'] = rso_dict[obj_id]['area']
+        state_params['Cd'] = rso_dict[obj_id]['Cd']
+        state_params['Cr'] = rso_dict[obj_id]['Cr']
+        
+        t_truth = truth_dict[obj_id]['t_truth']
+        X_truth = truth_dict[obj_id]['X_truth']
+        
+        for kk in range(len(tk_list)):
+            
+            tk = tk_list[kk]
+            Yk = Yk_list[kk]
+            sensor_id = sensor_id_list[kk]
+            
+            # Check against truth meas in visibility dict
+            vis_tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+            ind = vis_tk_list.index(tk)
+            
+            vis_rg = visibility_dict[sensor_id][obj_id]['rg_list'][ind]
+            vis_az = visibility_dict[sensor_id][obj_id]['az_list'][ind]
+            vis_el = visibility_dict[sensor_id][obj_id]['el_list'][ind]
+            
+            vis_Yk = np.reshape([vis_rg, vis_az, vis_el], (3,1))
+            
+            true_resid = Yk - vis_Yk
+            
+            # Propagate estimated orbit and compute prefit resid
+            tvec = np.array([t0, tk])
+            tout, Xout = prop.propagate_orbit(Xo, tvec, state_params, int_params, bodies=bodies)
+            
+            Xk_est = Xout[-1,:].reshape(6,1)
+            truth_ind = list(t_truth).index(tk)
+            Xk_true = X_truth[truth_ind,:].reshape(6,1)
+            Xk_err = Xk_est - Xk_true
+            
+            sensor_params = sensor_dict[sensor_id]
+            est_Yk = sensor.compute_measurement(tk, Xk_est, sensor_params, bodies)
+            est_resid = est_Yk - vis_Yk
+            prefit_resid = Yk - est_Yk
+            
+            
+            print('')
+            print(sensor_id, obj_id)
+            print('tk', tk)
+            print('Yk', Yk)
+            print('vis_Yk', vis_Yk)
+            print('est_Yk', est_Yk)
+            print('true_resid', true_resid)
+            print('est_resid', est_resid)
+            print('prefit_resid', prefit_resid)
+            print('Xk_est', Xk_est)
+            print('Xk_true', Xk_true)
+            print('Xk_err', Xk_err)
+            
+            
+            mistake
+            
+    
+    
+    
+    return
 
 
 
@@ -687,8 +805,19 @@ if __name__ == '__main__':
     
     plt.close('all')
     
-    cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
-    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    plot_cdm_data(cdm_file, rso_file)
+    # cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
+    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    # plot_cdm_data(cdm_file, rso_file)
+    
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
+    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
+    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
+    visibility_file = os.path.join('data', 'visibility_data.pkl')  
+    
+    obj_id_list = [97006]
+    analyze_bad_object(meas_file, truth_file, estimated_rso_file, 
+                           visibility_file, sensor_file, obj_id_list)
+    
 
 

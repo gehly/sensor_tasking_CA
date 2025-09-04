@@ -513,7 +513,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # Filter setup
     n = 6
     alpha = 1e-2
-    Qeci = 1e-13*np.diag([1., 1., 1.])
+    Qeci = 1e-13*np.diag([1., 1., 1.])    
     
     # Prior information about the distribution
     beta = 2.
@@ -531,8 +531,6 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # Loop over times
     tk_list_full = sorted(list(time_based_visibility.keys()))    
     for tk in tk_list_coarse:
-        
-        
         
         # Loop over sensors
         for sensor_id in time_based_visibility[tk]:
@@ -581,6 +579,12 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                     tbar, Xbar, Pbar = prop.propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
                 
                 # Update RSO dict with predicted state and covar
+                delta_t = tk - t0
+                Gamma = np.zeros((6,3))
+                Gamma[0:3,:] = (delta_t**2./2) * np.eye(3)
+                Gamma[3:6,:] = delta_t * np.eye(3)
+                Pbar += np.dot(Gamma, np.dot(Qeci, Gamma.T))
+                                
                 Pbar = conj.remediate_covariance(Pbar, 1e-12)[0]
                 rso_dict[obj_id]['epoch_tdb'] = tk
                 rso_dict[obj_id]['state'] = Xbar
@@ -606,6 +610,13 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                         tbar_inner, Xbar_inner, Pbar_inner = prop.propagate_state_and_covar(Xk_inner, Pk_inner, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
 
                     # Compute updated covar
+                    # delta_t_inner = tk_inner - t0_inner
+                    # Gamma = np.zeros((6,3))
+                    # Gamma[0:3,:] = (delta_t_inner**2./2) * np.eye(3)
+                    # Gamma[3:6,:] = delta_t_inner * np.eye(3)
+                    # Pbar_inner += np.dot(Gamma, np.dot(Qeci, Gamma.T))
+                    
+                    
                     Pbar_inner = conj.remediate_covariance(Pbar_inner, 1e-12)[0]
                     sqP = np.linalg.cholesky(Pbar_inner)
                     Xrep = np.tile(Xbar_inner, (1, n))

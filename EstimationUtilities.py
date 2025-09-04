@@ -472,8 +472,12 @@ def ukf2(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies
             Gamma[0:q,:] = (delta_t**2./2) * np.eye(q)
             Gamma[q:2*q,:] = delta_t * np.eye(q)
             
+        # TODO: Reset this if needed to standard UKF style
         Xbar = np.dot(chi, Wm.T)
         Xbar = np.reshape(Xbar, (n, 1))
+        
+        # Xbar = chi[:,0].reshape(n, 1)   
+        
         chi_diff = chi - np.dot(Xbar, np.ones((1, (2*n+1))))
         Pbar = np.dot(chi_diff, np.dot(diagWc, chi_diff.T)) + np.dot(Gamma, np.dot(Qeci, Gamma.T))
         
@@ -515,12 +519,19 @@ def ukf2(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies
         Pyy = np.dot(Y_diff, np.dot(diagWc, Y_diff.T)) + Rk
         Pxy = np.dot(chi_diff,  np.dot(diagWc, Y_diff.T))
         
+        # Check prefit resids and fix azimuth rollover if needed
+        prefit_resids = Yk - ybar
+        if prefit_resids[1] > np.pi:
+            prefit_resids[1] -= 2.*np.pi
+        if prefit_resids[1] < -np.pi:
+            prefit_resids[1] += 2.*np.pi
+        
         # print('Yk', Yk)
         # print('ybar', ybar)
         
         # Kalman gain and measurement update
         Kk = np.dot(Pxy, np.linalg.inv(Pyy))
-        Xk = Xbar + np.dot(Kk, Yk-ybar)
+        Xk = Xbar + np.dot(Kk, prefit_resids)
         
         # Joseph form of covariance update
         cholPbar = np.linalg.inv(np.linalg.cholesky(Pbar))
@@ -552,6 +563,7 @@ def ukf2(state_params, meas_dict, sensor_dict, int_params, filter_params, bodies
         print('Xbar', Xbar)
         print('Yk', Yk)
         print('ybar', ybar)     
+        print('prefit_resids', prefit_resids)
         print('resids', resids)
         
         # Store output

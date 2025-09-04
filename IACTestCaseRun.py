@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(5,6):      
+    for day in range(0,1):      
         
         # Load data if needed
         if day > 0:
@@ -513,7 +513,7 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
     filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
     filter_params['alpha'] = 1e-2
-    filter_params['gap_seconds'] = 900.  # 1e6
+    filter_params['gap_seconds'] = 1e6
     
     int_params = {}
     int_params['tudat_integrator'] = 'dp87'
@@ -958,21 +958,25 @@ def generate_case_summary(meas_file, output_file, truth_file):
     # Plot all 3D position errors
     plt.figure()
     obj_id_list = sorted(list(output_dict))
+    print(obj_id_list)
+
     diverge_list = []
     for obj_id in obj_id_list:
         if obj_id == primary_id or obj_id in secondary_id_list:
             continue
         
         thrs, pos3D = analysis.compute_errors(truth_dict, output_dict, obj_id, False)
-        if max(pos3D) > 1e5:
+        if max(pos3D) > 1e4:
             diverge_list.append(obj_id)
     
         plt.semilogy(thrs, pos3D, color='0.8')
         
     for obj_id in secondary_id_list:
+        if obj_id not in obj_id_list:
+            continue
         
         thrs, pos3D = analysis.compute_errors(truth_dict, output_dict, obj_id, False)
-        if max(pos3D) > 1e5:
+        if max(pos3D) > 1e4:
             diverge_list.append(obj_id)
     
         plt.semilogy(thrs, pos3D, color='b')
@@ -996,7 +1000,7 @@ def generate_case_summary(meas_file, output_file, truth_file):
     print('Num Meas Primary (Starlink)', nmeas_primary)
     print('Num Meas Secondary', nmeas_secondary)
     print('Num Meas Tertiary', nmeas_tertiary)
-    print('Diverged object list', diverge_list)
+    print('Bad object list', diverge_list)
 
     return
 
@@ -1205,18 +1209,19 @@ if __name__ == '__main__':
     # generate_greedy_measurements(estimated_rso_file, sensor_file, visibility_file,
     #                              truth_file, meas_file, reward_fcn)
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-                                     truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+    #                                  truth_file, meas_file, reward_fcn)
     
     
-    #obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # obj_id_list = [91005, 95001, 95002, 97006]
-    # obj_id_list = [91005]
-    # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
-    #                             output_file, obj_id_list)
+    obj_id_list = [97006]
+    # obj_id_list = []
+    filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
+                                output_file, obj_id_list)
 
-    # process_filter_output(output_file, truth_file)
+    process_filter_output(output_file, truth_file)
     
     
     # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
