@@ -543,6 +543,11 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
         
             # Loop over objects visible to this sensor
             obj_id_list = time_based_visibility[tk][sensor_id]
+            
+            # TODO: comment this out if not editing objects from RSO dict
+            # obj_id_list = [obj_id for obj_id in obj_id_list if obj_id in rso_dict]
+            
+            
             reward_list = []
             Pk_list = []
             Xk_list = []
@@ -551,7 +556,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             tk_inner_loop_list = []
             Yk_inner_loop_list = []
             for obj_id in obj_id_list:
-                
+                                
                 # Truth data for this object
                 tk_truth = truth_dict[obj_id]['t_truth']
                 Xk_truth = truth_dict[obj_id]['X_truth']
