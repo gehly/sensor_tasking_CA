@@ -687,7 +687,7 @@ if __name__ == '__main__':
     
     plt.close('all')
     
-    cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
     rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     plot_cdm_data(cdm_file, rso_file)
 
