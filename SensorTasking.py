@@ -513,7 +513,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # Filter setup
     n = 6
     alpha = 1e-2
-    Qeci = 1e-13*np.diag([1., 1., 1.])    
+    Qeci = 1e-15*np.diag([1., 1., 1.])
     
     # Prior information about the distribution
     beta = 2.
@@ -657,8 +657,15 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                         meas = meas_types[ii]
                         Yk[ii] += np.random.randn()*sigma_dict[meas]
                         
+                    # Check prefit resids and fix azimuth rollover if needed
+                    prefit_resids = Yk - ybar
+                    if prefit_resids[1] > np.pi:
+                        prefit_resids[1] -= 2.*np.pi
+                    if prefit_resids[1] < -np.pi:
+                        prefit_resids[1] += 2.*np.pi
+                                                
                     # Compute state update
-                    Xk_inner = Xbar_inner + np.dot(Kk, Yk-ybar)
+                    Xk_inner = Xbar_inner + np.dot(Kk, prefit_resids)
                     
                     # Store measurments
                     Yk_list.append(Yk)

@@ -805,19 +805,19 @@ if __name__ == '__main__':
     
     plt.close('all')
     
-    # cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
-    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    # plot_cdm_data(cdm_file, rso_file)
+    cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    plot_cdm_data(cdm_file, rso_file)
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
-    truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
-    visibility_file = os.path.join('data', 'visibility_data.pkl')  
+    # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
+    # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    # sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
+    # truth_file = os.path.join('data', 'propagated_truth_10sec.pkl')
+    # visibility_file = os.path.join('data', 'visibility_data.pkl')  
     
-    obj_id_list = [97006]
-    analyze_bad_object(meas_file, truth_file, estimated_rso_file, 
-                           visibility_file, sensor_file, obj_id_list)
+    # obj_id_list = [97006]
+    # analyze_bad_object(meas_file, truth_file, estimated_rso_file, 
+    #                        visibility_file, sensor_file, obj_id_list)
     
 
 
