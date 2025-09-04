@@ -504,7 +504,7 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
     
     # Standard data
     filter_params = {}
-    filter_params['Qeci'] = 1e-15*np.diag([1., 1., 1.])
+    filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
     filter_params['alpha'] = 1e-2
     filter_params['gap_seconds'] = 1e6
@@ -1189,7 +1189,7 @@ if __name__ == '__main__':
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_all.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_badlist.pkl')
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
     
     
@@ -1200,19 +1200,19 @@ if __name__ == '__main__':
     
     
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-                                     truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+    #                                  truth_file, meas_file, reward_fcn)
     
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # obj_id_list = [91005, 95001, 95002, 97006]
-    # obj_id_list = [97006]
+    obj_id_list = [91005]
     # obj_id_list = []
-    # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
-    #                             output_file, obj_id_list)
+    filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
+                                output_file, obj_id_list)
 
-    # process_filter_output(output_file, truth_file)
+    process_filter_output(output_file, truth_file)
     
     
     # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)

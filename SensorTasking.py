@@ -513,7 +513,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # Filter setup
     n = 6
     alpha = 1e-2
-    Qeci = 1e-15*np.diag([1., 1., 1.])
+    Qeci = 1e-13*np.diag([1., 1., 1.])
     
     # Prior information about the distribution
     beta = 2.
