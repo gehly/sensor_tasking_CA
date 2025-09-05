@@ -194,129 +194,129 @@ def generate_baseline_measurements(rso_file, sensor_file, visibility_file,
     return
 
 
-def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
-                                 truth_file, meas_file, reward_fcn):
+# def generate_greedy_measurements(rso_file, sensor_file, visibility_file,
+#                                  truth_file, meas_file, reward_fcn):
     
     
-    # Load rso data
-    pklFile = open(rso_file, 'rb')
-    data = pickle.load( pklFile )
-    rso_dict = data[0]
-    pklFile.close()
+#     # Load rso data
+#     pklFile = open(rso_file, 'rb')
+#     data = pickle.load( pklFile )
+#     rso_dict = data[0]
+#     pklFile.close()
     
-    t0_all = rso_dict[52373]['epoch_tdb']
+#     t0_all = rso_dict[52373]['epoch_tdb']
     
-    # Load sensor and visibility data
-    pklFile = open(sensor_file, 'rb')
-    data = pickle.load( pklFile )
-    sensor_dict = data[0]
-    pklFile.close()
+#     # Load sensor and visibility data
+#     pklFile = open(sensor_file, 'rb')
+#     data = pickle.load( pklFile )
+#     sensor_dict = data[0]
+#     pklFile.close()
     
-    pklFile = open(visibility_file, 'rb')
-    data = pickle.load( pklFile )
-    visibility_dict = data[0]
-    pklFile.close()    
+#     pklFile = open(visibility_file, 'rb')
+#     data = pickle.load( pklFile )
+#     visibility_dict = data[0]
+#     pklFile.close()    
     
-    pklFile = open(truth_file, 'rb')
-    data = pickle.load( pklFile )
-    truth_dict = data[0]
-    pklFile.close()
+#     pklFile = open(truth_file, 'rb')
+#     data = pickle.load( pklFile )
+#     truth_dict = data[0]
+#     pklFile.close()
     
     
     
-    # Parse visibility dict to generate time based visibility dict
-    time_based_visibility = {}
-    for sensor_id in visibility_dict:
-        for obj_id in visibility_dict[sensor_id]:
-            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+#     # Parse visibility dict to generate time based visibility dict
+#     time_based_visibility = {}
+#     for sensor_id in visibility_dict:
+#         for obj_id in visibility_dict[sensor_id]:
+#             tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
             
-            for tk in tk_list:
-                if tk not in time_based_visibility:
-                    time_based_visibility[tk] = {}                    
+#             for tk in tk_list:
+#                 if tk not in time_based_visibility:
+#                     time_based_visibility[tk] = {}                    
                     
-                if sensor_id not in time_based_visibility[tk]:
-                    time_based_visibility[tk][sensor_id] = []
+#                 if sensor_id not in time_based_visibility[tk]:
+#                     time_based_visibility[tk][sensor_id] = []
                 
-                # Append object IDs visible to this sensor
-                time_based_visibility[tk][sensor_id].append(obj_id)
+#                 # Append object IDs visible to this sensor
+#                 time_based_visibility[tk][sensor_id].append(obj_id)
     
     
-    # Process data in 1 day increments
-    meas_dict = {}
-    for day in range(6,7):      
+#     # Process data in 1 day increments
+#     meas_dict = {}
+#     for day in range(6,7):      
         
-        # Load data if needed
-        if day > 0:
-            pklFile = open(meas_file, 'rb')
-            data = pickle.load( pklFile )
-            meas_dict = data[0]
-            rso_dict = data[1]
-            pklFile.close()
+#         # Load data if needed
+#         if day > 0:
+#             pklFile = open(meas_file, 'rb')
+#             data = pickle.load( pklFile )
+#             meas_dict = data[0]
+#             rso_dict = data[1]
+#             pklFile.close()
         
-        # Reduce visibility dict to time window of interest
-        t0_interval = t0_all + day*86400.
-        # tf_interval = t0_interval + 86400.
+#         # Reduce visibility dict to time window of interest
+#         t0_interval = t0_all + day*86400.
+#         # tf_interval = t0_interval + 86400.
         
-        tk_vis = np.array([])
-        tk_coarse = np.array([])
-        for hr in range(0,24):
-            tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 10.)
-            tk_vis = np.append(tk_vis, tk_hr)
+#         tk_vis = np.array([])
+#         tk_coarse = np.array([])
+#         for hr in range(0,24):
+#             tk_hr = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 10.)
+#             tk_vis = np.append(tk_vis, tk_hr)
             
-            tk_hr2 = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 60.)
-            tk_coarse = np.append(tk_coarse, tk_hr2)
+#             tk_hr2 = np.arange(t0_interval+hr*3600., t0_interval+hr*3600. + 600., 60.)
+#             tk_coarse = np.append(tk_coarse, tk_hr2)
             
-        print(tk_vis)
-        print(len(tk_vis))
+#         print(tk_vis)
+#         print(len(tk_vis))
         
-        tk_list_coarse = []
-        visibility_dict_interval = {}
-        for tk in sorted(list(time_based_visibility.keys())):
-            # if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
+#         tk_list_coarse = []
+#         visibility_dict_interval = {}
+#         for tk in sorted(list(time_based_visibility.keys())):
+#             # if tk >= t0_interval and tk < tf_interval and math.fmod((tk-t0_interval),60)==0:
             
-            # print(tk)
-            # print(tk_vis[0])
-            # mistake
+#             # print(tk)
+#             # print(tk_vis[0])
+#             # mistake
                 
-            if tk in tk_vis:
-                visibility_dict_interval[tk] = time_based_visibility[tk]
+#             if tk in tk_vis:
+#                 visibility_dict_interval[tk] = time_based_visibility[tk]
                 
-                if tk in tk_coarse:
-                    tk_list_coarse.append(tk)
+#                 if tk in tk_coarse:
+#                     tk_list_coarse.append(tk)
                 
                 
-        tk_check = sorted(list(visibility_dict_interval.keys()))
-        print((tk_check[-1] - tk_check[0]))
+#         tk_check = sorted(list(visibility_dict_interval.keys()))
+#         print((tk_check[-1] - tk_check[0]))
         
-        print((tk_check[0] - t0_all))
-        print((tk_check[-1] - t0_all))
+#         print((tk_check[0] - t0_all))
+#         print((tk_check[-1] - t0_all))
         
-        print('tk vis', tk_check[0:20])
-        print('tk coarse', tk_list_coarse[0:20])
-        print('tk vis', len(tk_check))
-        print('tk coarse', len(tk_list_coarse))
-        print('obj id list', sorted(list(meas_dict.keys())))
-        print('nobj', len(meas_dict))
+#         print('tk vis', tk_check[0:20])
+#         print('tk coarse', tk_list_coarse[0:20])
+#         print('tk vis', len(tk_check))
+#         print('tk coarse', len(tk_list_coarse))
+#         print('obj id list', sorted(list(meas_dict.keys())))
+#         print('nobj', len(meas_dict))
         
-        # mistake
+#         # mistake
         
                 
-        # Process data to generate measurements and updated state catalog
-        meas_dict, rso_dict = \
-            sensor.greedy_sensor_tasking_multistep(rso_dict, sensor_dict,
-                                                   visibility_dict_interval, 
-                                                   visibility_dict, truth_dict, 
-                                                   meas_dict, reward_fcn, tk_list_coarse)
+#         # Process data to generate measurements and updated state catalog
+#         meas_dict, rso_dict = \
+#             sensor.greedy_sensor_tasking_multistep(rso_dict, sensor_dict,
+#                                                    visibility_dict_interval, 
+#                                                    visibility_dict, truth_dict, 
+#                                                    meas_dict, reward_fcn, tk_list_coarse)
     
 
     
-        # Save measurement data
-        pklFile = open( meas_file, 'wb' )
-        pickle.dump([meas_dict, rso_dict], pklFile, -1)
-        pklFile.close()
+#         # Save measurement data
+#         pklFile = open( meas_file, 'wb' )
+#         pickle.dump([meas_dict, rso_dict], pklFile, -1)
+#         pklFile.close()
     
     
-    return
+#     return
 
 
 def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(0,7):      
+    for day in range(4,5):      
         
         # Load data if needed
         if day > 0:
@@ -585,8 +585,11 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
     return
 
 
-def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file):
+def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file,
+                                 truth_file):
     
+    risk_object_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000,
+                        96000, 97000, 98000, 99000]
     
     # Load rso data
     pklFile = open(rso_file, 'rb')
@@ -606,6 +609,11 @@ def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file):
     meas_dict = data[0]
     rso_dict2 = data[1]
     pklFile.close() 
+    
+    pklFile = open(truth_file, 'rb')
+    data = pickle.load( pklFile )
+    truth_dict = data[0]
+    pklFile.close()   
     
     # Standard data
     filter_params = {}
@@ -683,9 +691,24 @@ def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file):
         Xf_filter = filter_output[tf_filter]['state']
         Pf_filter = filter_output[tf_filter]['covar']
         
-        rso_dict2[obj_id]['epoch_tdb'] = tf_filter
-        rso_dict2[obj_id]['state'] = Xf_filter
-        rso_dict2[obj_id]['covar'] = Pf_filter
+        if obj_id in risk_object_list:        
+        
+            rso_dict2[obj_id]['epoch_tdb'] = tf_filter
+            rso_dict2[obj_id]['state'] = Xf_filter
+            rso_dict2[obj_id]['covar'] = Pf_filter
+            
+        else:
+            
+            print(obj_id)
+            t_truth = truth_dict[obj_id]['t_truth']
+            X_truth = truth_dict[obj_id]['X_truth']
+            truth_ind = list(t_truth).index(tf_filter)
+                
+            Xf_true = X_truth[truth_ind,:].reshape(6,1)
+            
+            rso_dict2[obj_id]['epoch_tdb'] = tf_filter
+            rso_dict2[obj_id]['state'] = Xf_true
+            rso_dict2[obj_id]['covar'] = Pf_filter
         
         
     # Save output
@@ -1191,8 +1214,8 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_all.pkl')
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_day4.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_secondaries.pkl')
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
     
     
@@ -1203,9 +1226,9 @@ if __name__ == '__main__':
     
     
     
-    # reward_fcn = sensor.reward_renyi_infogain
-    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-    #                                  truth_file, meas_file, reward_fcn)
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+                                     truth_file, meas_file, reward_fcn)
     
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
@@ -1218,7 +1241,7 @@ if __name__ == '__main__':
     # process_filter_output(output_file, truth_file)
     
     
-    # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
+    # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file, truth_file)
 
 
     # window_hrs = 8.
@@ -1230,7 +1253,7 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
-    generate_case_summary(meas_file, output_file, truth_file)
+    # generate_case_summary(meas_file, output_file, truth_file)
     
     
     # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, priority_cdm_file, truth_file)

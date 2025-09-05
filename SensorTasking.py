@@ -608,6 +608,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                         Xbar_inner = Xk_inner
                         Pbar_inner = Pk_inner
                     else:
+                        # Pk_inner = conj.remediate_covariance(Pk_inner, 1e-12)[0]
                         tvec = np.array([t0_inner, tk_inner])
                         tbar_inner, Xbar_inner, Pbar_inner = prop.propagate_state_and_covar(Xk_inner, Pk_inner, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
 
