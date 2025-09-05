@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(5,6):      
+    for day in range(6,7):      
         
         # Load data if needed
         if day > 0:
