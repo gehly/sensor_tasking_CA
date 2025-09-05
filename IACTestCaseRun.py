@@ -392,7 +392,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(2,3):      
+    for day in range(0,7):      
         
         # Load data if needed
         if day > 0:
@@ -986,14 +986,17 @@ def generate_case_summary(meas_file, output_file, truth_file):
     plt.ylabel('3D Pos Error [m]')
     plt.show()
     
+    nmeas_total = nmeas_primary + nmeas_secondary + nmeas_tertiary
+    
     
     print('')
     print(meas_file)
     print('Objects and Measurements')
     print('Num Objects Detected', nobj_detected)
-    print('Num Meas Primary (Starlink)', nmeas_primary)
-    print('Num Meas Secondary', nmeas_secondary)
-    print('Num Meas Tertiary', nmeas_tertiary)
+    print('Total Num Meas', nmeas_total)
+    print('Num Meas Primary (Starlink)', nmeas_primary, nmeas_primary/nmeas_total*100.)
+    print('Num Meas Secondary', nmeas_secondary, nmeas_secondary/nmeas_total*100.)
+    print('Num Meas Tertiary', nmeas_tertiary, nmeas_tertiary/nmeas_total*100.)
     print('Bad object list', diverge_list)
 
     return
@@ -1189,7 +1192,7 @@ if __name__ == '__main__':
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_badlist.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_all.pkl')
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
     
     
@@ -1207,12 +1210,12 @@ if __name__ == '__main__':
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # obj_id_list = [91005, 95001, 95002, 97006]
-    obj_id_list = [91005]
+    # obj_id_list = [91005]
     # obj_id_list = []
-    filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
-                                output_file, obj_id_list)
+    # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
+    #                             output_file, obj_id_list)
 
-    process_filter_output(output_file, truth_file)
+    # process_filter_output(output_file, truth_file)
     
     
     # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file)
@@ -1227,7 +1230,7 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
-    # generate_case_summary(meas_file, output_file, truth_file)
+    generate_case_summary(meas_file, output_file, truth_file)
     
     
     # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, priority_cdm_file, truth_file)

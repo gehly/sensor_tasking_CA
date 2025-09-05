@@ -499,6 +499,8 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     for obj_id in sorted(list(rso_dict.keys())):
         print(obj_id, rso_dict[obj_id]['tif'])
         
+    risk_object_list = sorted(list(TCA_dict.keys()))
+    risk_object_list.append(primary_id)
         
     # mistake
         
@@ -698,8 +700,8 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             Yk_inner_loop = Yk_inner_loop_list[max_ind]
             
             
-            # tk_truth = truth_dict[max_obj_id]['t_truth']
-            # Xk_truth = truth_dict[max_obj_id]['X_truth']
+            max_t_truth = truth_dict[max_obj_id]['t_truth']
+            max_X_truth = truth_dict[max_obj_id]['X_truth']
             
             
             
@@ -752,8 +754,27 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             
             # rso_dict[max_obj_id]['state'] += np.dot(max_Kk, Yk-max_ybar)
             rso_dict[max_obj_id]['epoch_tdb'] = tk_inner_loop[-1]
-            rso_dict[max_obj_id]['state'] = max_Xk    #Xk_t   # Xk_truth[list(tk_truth).index(tk_inner)]
             rso_dict[max_obj_id]['covar'] = max_Pk
+            
+            # TODO: Clean this up, ideally won't need at all
+            # Only use estimated state for objects we calculate risk for
+            if max_obj_id in risk_object_list:
+                
+                if max_obj_id == primary_id:
+                    rso_dict[max_obj_id]['state'] = max_Xk                    
+                
+                elif tk > TCA_dict[max_obj_id]:
+                    truth_ind = list(max_t_truth).index(tk_inner_loop[-1])
+                    rso_dict[max_obj_id]['state'] = max_X_truth[truth_ind,:].reshape(6,1)
+
+                else:
+                    rso_dict[max_obj_id]['state'] = max_Xk    
+                
+            # All non-risk objects, just use true state
+            else:
+                truth_ind = list(max_t_truth).index(tk_inner_loop[-1])
+                rso_dict[max_obj_id]['state'] = max_X_truth[truth_ind,:].reshape(6,1)
+
             
             # Update TIF for this object (loop over all secondaries if primary)
             rso_dict = compute_priorities(rso_dict, t0, max_obj_id, primary_id,
