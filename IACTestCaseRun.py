@@ -507,7 +507,7 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
     filter_params['Qeci'] = 1e-13*np.diag([1., 1., 1.])
     filter_params['Qric'] = 0*np.diag([1., 1., 1.])
     filter_params['alpha'] = 1e-2
-    filter_params['gap_seconds'] = 1e6
+    
     
     int_params = {}
     int_params['tudat_integrator'] = 'dp87'
@@ -538,6 +538,11 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
         print('')
         print('obj_id', obj_id)
         t0 = rso_dict[obj_id]['epoch_tdb']
+        
+        if obj_id == 95000:
+            filter_params['gap_seconds'] = 1e6
+        else:
+            filter_params['gap_seconds'] = 900.  
         
         # Retrieve state parameters
         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
@@ -1214,9 +1219,9 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_day4.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_secondaries.pkl')
-    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01.pkl')
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_full.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_secondaries_Q0.pkl')
+    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01_Q0.pkl')
     
     
     
@@ -1226,14 +1231,14 @@ if __name__ == '__main__':
     
     
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-                                     truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+    #                                  truth_file, meas_file, reward_fcn)
     
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # obj_id_list = [91005, 95001, 95002, 97006]
-    # obj_id_list = [91005]
+    # obj_id_list = [95000]
     # obj_id_list = []
     # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
     #                             output_file, obj_id_list)
@@ -1251,7 +1256,7 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
+    process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
     # generate_case_summary(meas_file, output_file, truth_file)
     
