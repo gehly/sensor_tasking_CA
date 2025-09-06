@@ -348,9 +348,9 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     pklFile.close()
     
     # Form initial target priorities
-    fixed_tif = True
+    fixed_tif = False
     
-    tif_base = 1.0
+    tif_base = 0.01
     tif_high = 1.0
     
     primary_id = 52373
@@ -394,7 +394,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(5,7):      
+    for day in range(0,7):      
         
         # Load data if needed
         if day > 0:
@@ -542,7 +542,7 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
         t0 = rso_dict[obj_id]['epoch_tdb']
         
         if obj_id == 95000:
-            filter_params['gap_seconds'] = 1e6
+            filter_params['gap_seconds'] = 900. # 1e6
         else:
             filter_params['gap_seconds'] = 900.  
         
@@ -1228,13 +1228,13 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_full.pkl')
-    # output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_all_Q0.pkl')
-    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01_Q0.pkl')
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_secondaries.pkl')
+    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
     
     
-    meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
-    output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
+    # meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
+    # output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
     catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
@@ -1248,14 +1248,14 @@ if __name__ == '__main__':
     #                                  truth_file, meas_file, reward_fcn)
     
     
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # obj_id_list = [91005, 95001, 95002, 97006]
     # obj_id_list = [95000]
     # obj_id_list = []
-    # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
-    #                             output_file, obj_id_list)
+    filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
+                                output_file, obj_id_list)
 
-    # process_filter_output(output_file, truth_file)
+    process_filter_output(output_file, truth_file)
     
     
     # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file, truth_file)
@@ -1273,7 +1273,7 @@ if __name__ == '__main__':
     # generate_case_summary(meas_file, output_file, truth_file)
     
     
-    plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file, priority_cdm_file, truth_file)
+    # plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file, priority_cdm_file, truth_file)
 
 
 
