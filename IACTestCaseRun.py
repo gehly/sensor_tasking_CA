@@ -1233,7 +1233,7 @@ if __name__ == '__main__':
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01_Q0.pkl')
     
     
-    meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_day5.pkl')
+    meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
     output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
     catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
@@ -1243,9 +1243,9 @@ if __name__ == '__main__':
     
     
     
-    reward_fcn = sensor.reward_renyi_infogain
-    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-                                     truth_file, meas_file, reward_fcn)
+    # reward_fcn = sensor.reward_renyi_infogain
+    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+    #                                  truth_file, meas_file, reward_fcn)
     
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
@@ -1268,12 +1268,12 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
+    # process_cdm_output(estimated_rso_file, output_file, catalog_maint_cdm_file)
 
     # generate_case_summary(meas_file, output_file, truth_file)
     
     
-    # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, priority_cdm_file, truth_file)
+    plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file, priority_cdm_file, truth_file)
 
 
 
