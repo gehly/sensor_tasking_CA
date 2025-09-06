@@ -467,7 +467,7 @@ def greedy_sensor_tasking_multistep(rso_dict, sensor_dict, time_based_visibility
 def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibility,
                                         visibility_dict, truth_dict, meas_dict,
                                         reward_fcn, tk_list_coarse, TCA_dict,
-                                        tif_base):
+                                        tif_base, fixed_tif=False):
     
     # Basic setup for propagation
     bodies_to_create = ['Sun', 'Earth', 'Moon']
@@ -493,8 +493,9 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # t0 = rso_dict[primary_id]['epoch_tdb']
     t0 = tk_list_coarse[0]
     secondary_id_list = sorted(list(TCA_dict.keys()))
-    rso_dict = compute_priorities(rso_dict, t0, obj_id, primary_id,
-                                  secondary_id_list, TCA_dict, tif_base, bodies)
+    if not fixed_tif:
+        rso_dict = compute_priorities(rso_dict, t0, obj_id, primary_id,
+                                      secondary_id_list, TCA_dict, tif_base, bodies)
     
     for obj_id in sorted(list(rso_dict.keys())):
         print(obj_id, rso_dict[obj_id]['tif'])
@@ -543,11 +544,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
         
             # Loop over objects visible to this sensor
             obj_id_list = time_based_visibility[tk][sensor_id]
-            
-            # TODO: comment this out if not editing objects from RSO dict
-            # obj_id_list = [obj_id for obj_id in obj_id_list if obj_id in rso_dict]
-            
-            
+                        
             reward_list = []
             Pk_list = []
             Xk_list = []
@@ -758,8 +755,14 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             rso_dict[max_obj_id]['covar'] = max_Pk
             
             # TODO: Clean this up, ideally won't need at all
+            
+            # All non-risk objects, just use true state
+            if fixed_tif or max_obj_id not in risk_object_list:
+                truth_ind = list(max_t_truth).index(tk_inner_loop[-1])
+                rso_dict[max_obj_id]['state'] = max_X_truth[truth_ind,:].reshape(6,1)
+
             # Only use estimated state for objects we calculate risk for
-            if max_obj_id in risk_object_list:
+            else:
                 
                 if max_obj_id == primary_id:
                     rso_dict[max_obj_id]['state'] = max_Xk                    
@@ -771,16 +774,11 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                 else:
                     rso_dict[max_obj_id]['state'] = max_Xk    
                 
-            # All non-risk objects, just use true state
-            else:
-                truth_ind = list(max_t_truth).index(tk_inner_loop[-1])
-                rso_dict[max_obj_id]['state'] = max_X_truth[truth_ind,:].reshape(6,1)
-
             
-            # Update TIF for this object (loop over all secondaries if primary)
-            rso_dict = compute_priorities(rso_dict, t0, max_obj_id, primary_id,
-                                          secondary_id_list, TCA_dict, tif_base,
-                                          bodies)
+                # Update TIF for this object (loop over all secondaries if primary)
+                rso_dict = compute_priorities(rso_dict, t0, max_obj_id, primary_id,
+                                              secondary_id_list, TCA_dict, tif_base,
+                                              bodies)
 
             # print('mag xdiff', np.linalg.norm(np.dot(max_Kk, Yk-max_ybar)))
             # print('resids', Yk-max_ybar)
@@ -797,9 +795,10 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
         #     T2TCA = TCA - tk
         #     if T2TCA < 0.:
         #         rso_dict[secondary_id]['tif'] = tif_base
-        rso_dict = compute_priorities_urgency_update(rso_dict, tk, primary_id,
-                                                     secondary_id_list,
-                                                     TCA_dict, tif_base)   
+        if not fixed_tif:
+            rso_dict = compute_priorities_urgency_update(rso_dict, tk, primary_id,
+                                                         secondary_id_list,
+                                                         TCA_dict, tif_base)   
             
             
         # if tk - t0_all > 12*3600:

@@ -348,7 +348,9 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     pklFile.close()
     
     # Form initial target priorities
-    tif_base = 0.1
+    fixed_tif = True
+    
+    tif_base = 1.0
     tif_high = 1.0
     
     primary_id = 52373
@@ -392,7 +394,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(6,7):      
+    for day in range(0,7):      
         
         # Load data if needed
         if day > 0:
@@ -459,7 +461,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
                                                        visibility_dict, truth_dict, 
                                                        meas_dict, reward_fcn,
                                                        tk_list_coarse, TCA_dict,
-                                                       tif_base)
+                                                       tif_base, fixed_tif)
     
 
     
@@ -593,8 +595,10 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
 def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file,
                                  truth_file):
     
-    risk_object_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000,
-                        96000, 97000, 98000, 99000]
+    # risk_object_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000,
+    #                     96000, 97000, 98000, 99000]
+    
+    risk_object_list = []
     
     # Load rso data
     pklFile = open(rso_file, 'rb')
@@ -654,6 +658,11 @@ def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file,
         print('')
         print('obj_id', obj_id)
         t0 = rso_dict[obj_id]['epoch_tdb']
+        
+        if obj_id == 95000:
+            filter_params['gap_seconds'] = 1e6
+        else:
+            filter_params['gap_seconds'] = 900. 
         
         # Retrieve state parameters
         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
@@ -1219,11 +1228,14 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_full.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_all_Q0.pkl')
+    # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_full.pkl')
+    # output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif01_all_Q0.pkl')
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01_Q0.pkl')
     
     
+    meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_day5.pkl')
+    output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
+    catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -1246,7 +1258,7 @@ if __name__ == '__main__':
     # process_filter_output(output_file, truth_file)
     
     
-    # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file, truth_file)
+    filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file, truth_file)
 
 
     # window_hrs = 8.
@@ -1258,7 +1270,7 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
-    generate_case_summary(meas_file, output_file, truth_file)
+    # generate_case_summary(meas_file, output_file, truth_file)
     
     
     # plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, priority_cdm_file, truth_file)
