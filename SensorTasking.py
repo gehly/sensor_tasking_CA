@@ -516,7 +516,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
     # Filter setup
     n = 6
     alpha = 1e-2
-    Qeci = 1e-13*np.diag([1., 1., 1.])
+    Qeci = 1e-15*np.diag([1., 1., 1.])
     
     # Prior information about the distribution
     beta = 2.
@@ -609,12 +609,37 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
                         tvec = np.array([t0_inner, tk_inner])
                         tbar_inner, Xbar_inner, Pbar_inner = prop.propagate_state_and_covar(Xk_inner, Pk_inner, tvec, state_params, int_params, bodies=bodies, alpha=alpha)
 
-                    # Compute updated covar
+                    # # Compute updated covar
                     # delta_t_inner = tk_inner - t0_inner
                     # Gamma = np.zeros((6,3))
                     # Gamma[0:3,:] = (delta_t_inner**2./2) * np.eye(3)
                     # Gamma[3:6,:] = delta_t_inner * np.eye(3)
                     # Pbar_inner += np.dot(Gamma, np.dot(Qeci, Gamma.T))
+                    
+                    
+                    try:
+                        sqP = np.linalg.cholesky(Pbar_inner)
+                    except:
+                        print('non pos def Pbar_inner')
+                        print('obj_id', obj_id)
+                        print(np.linalg.eig(Pbar_inner))
+                        print('non remediate', Pbar_inner)
+                        Pbar_inner = conj.remediate_covariance(Pbar_inner, 1e-12)[0]
+                        print(np.linalg.eig(Pbar_inner))
+                        print('remediated', Pbar_inner)
+                        # sqP = np.linalg.cholesky(Pbar_inner)
+                        
+                        min_eig = min(np.linalg.eig(Pbar_inner)[0])
+                        Lclip = 1e-10
+                        while min_eig < 0:
+                            Pbar_inner = conj.remediate_covariance(Pbar_inner, Lclip)[0]
+                            min_eig = min(np.linalg.eig(Pbar_inner)[0])
+                            Lclip *= 100.                            
+                            if Lclip > 1e6:
+                                mistake
+                                
+                        sqP = np.linalg.cholesky(Pbar_inner)         
+                        
                     
                     
                     Pbar_inner = conj.remediate_covariance(Pbar_inner, 1e-12)[0]
@@ -733,6 +758,8 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             
             # Store measurement data
             if max_obj_id not in meas_dict:
+                
+                print('new obj observed!', max_obj_id)
                 meas_dict[max_obj_id] = {}
                 meas_dict[max_obj_id]['tk_list'] = []
                 meas_dict[max_obj_id]['Yk_list'] = []
@@ -786,6 +813,7 @@ def greedy_sensor_tasking_multistep_tif(rso_dict, sensor_dict, time_based_visibi
             print('thrs from first meas', (tk-tk_list_coarse[0])/3600.)
             print('sensor id', sensor_id)
             print('selected obj', max_obj_id)
+            print('nobj observed', len(meas_dict))            
             print('posterior covar', np.sqrt(np.diag(max_Pk)))
             
             

@@ -14,7 +14,7 @@ from tudatpy.util import result2array
 # Load spice kernels
 spice.load_standard_kernels()
 
-
+import ConjunctionUtilities as conj
 
 
 def tudat_initialize_bodies(bodies_to_create=[]):
@@ -340,7 +340,28 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
     diagWc = np.diag(Wc)
     
     # Initial state and sigma points
-    sqP = np.linalg.cholesky(Po)
+    try:
+        sqP = np.linalg.cholesky(Po)
+    except:
+        print('non pos def Po')
+        print(np.linalg.eig(Po))
+        print('non remediate', Po)
+        Po = conj.remediate_covariance(Po, 1e-14*max(np.linalg.eig(Po)[0]))[0]
+        print(np.linalg.eig(Po))
+        print('remediated', Po)
+        
+        # min_eig = min(np.linalg.eig(Po)[0])
+        # Lclip = 1e-10
+        # while min_eig < 0:
+        #     Po = conj.remediate_covariance(Po, Lclip)[0]
+        #     min_eig = min(np.linalg.eig(Po)[0])
+        #     Lclip *= 100.
+        #     if Lclip > 1e6:
+        #         mistake
+        
+        sqP = np.linalg.cholesky(Po)         
+        
+    sqP = np.linalg.cholesky(Po)    
     Xrep = np.tile(Xo, (1, n))
     chi = np.concatenate((Xo, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1)
     chi_v = np.reshape(chi, (n*(2*n+1), 1), order='F')

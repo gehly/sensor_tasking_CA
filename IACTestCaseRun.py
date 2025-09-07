@@ -394,7 +394,7 @@ def generate_greedy_measurements_tif(rso_file, sensor_file, visibility_file,
     
     # Process data in 1 day increments
     meas_dict = {}
-    for day in range(0,7):      
+    for day in range(2,3):      
         
         # Load data if needed
         if day > 0:
@@ -595,10 +595,10 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
 def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file,
                                  truth_file):
     
-    # risk_object_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000,
-    #                     96000, 97000, 98000, 99000]
+    risk_object_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000,
+                        96000, 97000, 98000, 99000]
     
-    risk_object_list = []
+    # risk_object_list = []
     
     # Load rso data
     pklFile = open(rso_file, 'rb')
@@ -649,20 +649,27 @@ def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file,
     
     # Loop over objects
     output_dict = {}
-    obj_id_list = sorted(list(meas_dict.keys()))
+    # obj_id_list = sorted(list(meas_dict.keys()))
+    obj_id_list = sorted(list(rso_dict.keys()))
+    not_obs_list = []
     for obj_id in obj_id_list:
         
         if obj_id not in meas_dict:
+            not_obs_list.append(obj_id)
+            # epoch_tdb = rso_dict[obj_id]['epoch_tdb']
+            
+            # rso_dict2[obj_id]['state'] = Xf_true            
+            
             continue
         
         print('')
         print('obj_id', obj_id)
         t0 = rso_dict[obj_id]['epoch_tdb']
         
-        if obj_id == 95000:
+        if obj_id == 95003:
             filter_params['gap_seconds'] = 1e6
         else:
-            filter_params['gap_seconds'] = 900. 
+            filter_params['gap_seconds'] = 900.
         
         # Retrieve state parameters
         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
@@ -724,6 +731,8 @@ def filter_process_meas_and_save(rso_file, sensor_file, meas_file, output_file,
             rso_dict2[obj_id]['state'] = Xf_true
             rso_dict2[obj_id]['covar'] = Pf_filter
         
+        
+    print('not obs list', not_obs_list)
         
     # Save output
     pklFile = open( output_file, 'wb' )
@@ -1228,7 +1237,7 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001.pkl')
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_day2.pkl')
     output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_secondaries.pkl')
     priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
     
@@ -1243,19 +1252,19 @@ if __name__ == '__main__':
     
     
     
-    # reward_fcn = sensor.reward_renyi_infogain
-    # generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
-    #                                  truth_file, meas_file, reward_fcn)
+    reward_fcn = sensor.reward_renyi_infogain
+    generate_greedy_measurements_tif(estimated_rso_file, sensor_file, visibility_file,
+                                     truth_file, meas_file, reward_fcn)
     
     
-    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
+    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # obj_id_list = [91005, 95001, 95002, 97006]
     # obj_id_list = [95000]
     # obj_id_list = []
-    filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
-                                output_file, obj_id_list)
+    # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
+    #                             output_file, obj_id_list)
 
-    process_filter_output(output_file, truth_file)
+    # process_filter_output(output_file, truth_file)
     
     
     # filter_process_meas_and_save(estimated_rso_file, sensor_file, meas_file, output_file, truth_file)

@@ -1393,6 +1393,55 @@ def plot_true_miss_distances(input_csv):
     
     return
 
+
+def test_remediate_covar():
+    
+    Po = np.array([[ 6.30232467e+18, -5.65714430e+18, -6.07207665e+18,
+                     3.22634126e+15,  8.96999091e+15, -6.72856654e+15],
+                   [-5.65714430e+18,  5.09005967e+18,  5.44681332e+18,
+                    -2.90603697e+15, -8.04893548e+15,  6.05129409e+15],
+                   [-6.07207665e+18,  5.44681332e+18,  5.85134866e+18,
+                    -3.10544315e+15, -8.64312635e+15,  6.47924531e+15],
+                   [ 3.22634126e+15, -2.90603697e+15, -3.10544315e+15,
+                     1.66000744e+12,  4.58971399e+12, -3.45421629e+12],
+                   [ 8.96999091e+15, -8.04893548e+15, -8.64312635e+15,
+                     4.58971399e+12,  1.27674890e+13, -9.57401995e+12],
+                   [-6.72856654e+15,  6.05129409e+15,  6.47924531e+15,
+                    -3.45421629e+12, -9.57401995e+12,  7.19483582e+12]])
+    
+    eig0 = np.linalg.eig(Po)[0]
+    print('eig0', eig0)
+    
+    P1 = conj.remediate_covariance(Po, 1e3)[0]
+    
+    eig1 = np.linalg.eig(P1)[0]
+    print('eig1', eig1)
+    
+    
+    P2 = np.array([[ 6.30232467e+18, -5.65714430e+18, -6.07207665e+18,
+                     3.22634126e+15,  8.96999091e+15, -6.72856654e+15],
+                   [-5.65714430e+18,  5.09005967e+18,  5.44681332e+18,
+                    -2.90603697e+15, -8.04893548e+15,  6.05129409e+15],
+                   [-6.07207665e+18,  5.44681332e+18,  5.85134866e+18,
+                    -3.10544315e+15, -8.64312635e+15,  6.47924531e+15],
+                   [ 3.22634126e+15, -2.90603697e+15, -3.10544315e+15,
+                    1.66000744e+12,   4.58971399e+12, -3.45421629e+12],
+                   [ 8.96999091e+15, -8.04893548e+15, -8.64312635e+15,
+                     4.58971399e+12,  1.27674890e+13, -9.57401995e+12],
+                   [-6.72856654e+15,  6.05129409e+15,  6.47924531e+15,
+                    -3.45421629e+12, -9.57401995e+12,  7.19483582e+12]])
+    
+    print(P2 - Po)
+    
+    eig2 = np.linalg.eig(P2)[0]
+    print('eig2', eig2)
+    
+    
+    
+    return
+
+
+
 ###############################################################################
 # Utilities
 ###############################################################################
@@ -1685,11 +1734,11 @@ if __name__ == '__main__':
 
     # verify_numerical_error()
     
-    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
-    sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
-    visibility_file = os.path.join('data', 'visibility_data.pkl')
-    metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
+    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
+    # sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
+    # visibility_file = os.path.join('data', 'visibility_data.pkl')
+    # metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
     
     
     # build_truth_catalog(rso_file, 6)
@@ -1724,6 +1773,7 @@ if __name__ == '__main__':
     # plot_true_miss_distances(metrics_file)
 
 
+    test_remediate_covar()
 
 
 
