@@ -542,9 +542,9 @@ def filter_process_measurements(rso_file, sensor_file, meas_file, output_file,
         t0 = rso_dict[obj_id]['epoch_tdb']
         
         if obj_id == 93000:
-            filter_params['gap_seconds'] = 900.
+            filter_params['gap_seconds'] = 1e6
         else:
-            filter_params['gap_seconds'] = 900.  
+            filter_params['gap_seconds'] = 1e6  
         
         # Retrieve state parameters
         state_params['epoch_tdb'] = rso_dict[obj_id]['epoch_tdb']
@@ -958,7 +958,7 @@ def process_cdm_output(rso_file, est_output_file, cdm_file):
     return
 
 
-def generate_case_summary(meas_file, output_file, truth_file):
+def generate_case_summary(meas_file, output_file, truth_file, bad_list=[]):
     
     pklFile = open(meas_file, 'rb')
     data = pickle.load( pklFile )
@@ -999,9 +999,14 @@ def generate_case_summary(meas_file, output_file, truth_file):
     plt.figure()
     obj_id_list = sorted(list(output_dict))
     print(obj_id_list)
-
+    label2 = True
+    label3 = True
     diverge_list = []
     for obj_id in obj_id_list:
+        
+        if obj_id in bad_list:
+            continue
+        
         if obj_id == primary_id or obj_id in secondary_id_list:
             continue
         
@@ -1009,7 +1014,11 @@ def generate_case_summary(meas_file, output_file, truth_file):
         if max(pos3D) > 1e4:
             diverge_list.append(obj_id)
     
-        plt.semilogy(thrs, pos3D, color='0.8')
+        if label3:
+            plt.semilogy(thrs, pos3D, color='0.8',label='tertiary')
+            label3 = False
+        else:
+            plt.semilogy(thrs, pos3D, color='0.8')
         
     for obj_id in secondary_id_list:
         if obj_id not in obj_id_list:
@@ -1019,17 +1028,22 @@ def generate_case_summary(meas_file, output_file, truth_file):
         if max(pos3D) > 1e4:
             diverge_list.append(obj_id)
     
-        plt.semilogy(thrs, pos3D, color='b')
+        if label2:
+            plt.semilogy(thrs, pos3D, color='b', label='secondary')
+            label2 = False
+        else:
+            plt.semilogy(thrs, pos3D, color='b')
         
-        
-        
+
     
     thrs, pos3D = analysis.compute_errors(truth_dict, output_dict, primary_id, False)
 
-    plt.semilogy(thrs, pos3D, color='r')
+    plt.semilogy(thrs, pos3D, color='r', label='primary')
     
     plt.xlabel('Time [hours]')
     plt.ylabel('3D Pos Error [m]')
+    plt.legend()
+    
     plt.show()
     
     nmeas_total = nmeas_primary + nmeas_secondary + nmeas_tertiary
@@ -1237,14 +1251,14 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
-    # output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_secondaries.pkl')
-    # priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
+    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
+    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_all.pkl')
+    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
     
     
-    meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
-    output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
-    catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    # meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
+    # output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
+    # catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -1258,11 +1272,12 @@ if __name__ == '__main__':
     
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
-    # catalog_maint_bad_list = [90003, 91005, 92004, 95001]
+    # catalog_maint_bad_list = [90003, 91005, 92004, 95001]  #,
+    tif001_bad_list = [90003, 91009, 91010, 94001, 94009, 95001, 98001, 98002]
     # obj_id_list = [93000]
     # obj_id_list = []
     # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
-    #                             output_file, obj_id_list)
+    #                             output_file, catalog_maint_bad_list)
 
     # process_filter_output(output_file, truth_file)
     
@@ -1279,7 +1294,7 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
-    generate_case_summary(meas_file, output_file, truth_file)
+    generate_case_summary(meas_file, output_file, truth_file, tif001_bad_list)
     
     
     # plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file, priority_cdm_file, truth_file)
