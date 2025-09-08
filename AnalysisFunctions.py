@@ -635,7 +635,7 @@ def plot_cdm_data(cdm_file, rso_file):
     secondary_id_list = sorted(list(plot_dict.keys()))
     
     # Plot miss distance    
-    colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(secondary_id_list)+1))
+    colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(secondary_id_list)))
     plt.figure()
     ii = 0
     for secondary_id in plot_dict:
@@ -644,12 +644,13 @@ def plot_cdm_data(cdm_file, rso_file):
         plt.semilogy(thrs, miss_distance, 'o--', color=colors[ii], label=str(secondary_id))
         ii += 1
         
+    plt.xlim([-10, 185])
     plt.ylabel('Miss Distance [m]')
     plt.xlabel('Time [hours]')
     plt.legend()
     
     # Plot Pc
-    plt.figure()
+    fig, ax1 = plt.subplots()
     ii = 0
     for secondary_id in plot_dict:
         thrs = plot_dict[secondary_id]['thrs']
@@ -657,12 +658,18 @@ def plot_cdm_data(cdm_file, rso_file):
         plt.semilogy(thrs, Pc, 'o--', color=colors[ii], label=str(secondary_id))
         ii += 1
         
+        
+    plt.ylim([1e-10, 2.])   
+    plt.xlim([-10, 185])
+    ax1.fill_between([-100, 200], [1e-12, 1e-12], [1e-7, 1e-7], color='g', alpha=0.2)
+    ax1.fill_between([-100, 200], [1e-7, 1e-7], [1e-4, 1e-4], color='y', alpha=0.2)
+    ax1.fill_between([-100, 200], [1e-4, 1e-4], [1, 1], color='r', alpha=0.2)
     plt.ylabel('Pc')
     plt.xlabel('Time [hours]')
     plt.legend()
     
     # Plot Uc
-    plt.figure()
+    fig, ax2 = plt.subplots()
     ii = 0
     for secondary_id in plot_dict:
         thrs = plot_dict[secondary_id]['thrs']
@@ -670,6 +677,11 @@ def plot_cdm_data(cdm_file, rso_file):
         plt.semilogy(thrs, Uc, 'o--', color=colors[ii], label=str(secondary_id))
         ii += 1
         
+    plt.ylim([1e-10, 2.])   
+    plt.xlim([-10, 185])
+    ax2.fill_between([-100, 200], [1e-12, 1e-12], [1e-7, 1e-7], color='g', alpha=0.2)
+    ax2.fill_between([-100, 200], [1e-7, 1e-7], [1e-4, 1e-4], color='y', alpha=0.2)
+    ax2.fill_between([-100, 200], [1e-4, 1e-4], [1, 1], color='r', alpha=0.2)  
     plt.ylabel('Uc')
     plt.xlabel('Time [hours]')
     plt.legend()
@@ -679,6 +691,166 @@ def plot_cdm_data(cdm_file, rso_file):
     
     
     return
+
+
+def plot_meas_data(rso_file, baseline_meas_file, cat_maint_meas_file, 
+                   priority_meas_file1, priority_meas_file2):
+    
+    # Load rso data
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load( pklFile )
+    rso_dict = data[0]
+    pklFile.close()
+    
+    t0_all = rso_dict[52373]['epoch_tdb']
+    
+    TCA_dict = {}
+    TCA_dict[90000] = t0_all + 30.*3600.
+    TCA_dict[91000] = t0_all + 42.*3600.
+    TCA_dict[92000] = t0_all + 60.*3600.
+    TCA_dict[93000] = t0_all + 80.*3600.
+    TCA_dict[94000] = t0_all + 97.*3600.
+    TCA_dict[95000] = t0_all + 98.*3600.
+    TCA_dict[96000] = t0_all + 99.*3600.
+    TCA_dict[97000] = t0_all + 125.*3600.
+    TCA_dict[98000] = t0_all + 145.*3600.
+    TCA_dict[99000] = t0_all + 162.*3600.
+    TCA_dict[52373] = t0_all + 162.*3600.
+    
+    baseline_t0_hrs, baseline_nobj_list, baseline_tp_hrs, baseline_priority_count_list, baseline_ta_hrs, baseline_all_count_list, baseline_nmeas_total, baseline_nmeas_priority = \
+        process_meas_file(baseline_meas_file, t0_all, TCA_dict)
+        
+    cat_maint_t0_hrs, cat_maint_nobj_list, cat_maint_tp_hrs, cat_maint_priority_count_list, cat_maint_ta_hrs, cat_maint_all_count_list,cat_maint_nmeas_total, cat_maint_nmeas_priority = \
+        process_meas_file(cat_maint_meas_file, t0_all, TCA_dict)
+        
+    priority1_t0_hrs, priority1_nobj_list, priority1_tp_hrs, priority1_priority_count_list, priority1_ta_hrs, priority1_all_count_list, priority1_nmeas_total, priority1_nmeas_priority = \
+        process_meas_file(priority_meas_file1, t0_all, TCA_dict)
+        
+    priority2_t0_hrs, priority2_nobj_list, priority2_tp_hrs, priority2_priority_count_list, priority2_ta_hrs, priority2_all_count_list, priority2_nmeas_total, priority2_nmeas_priority = \
+        process_meas_file(priority_meas_file2, t0_all, TCA_dict)
+    
+    
+    
+    print('baseline')
+    print(baseline_nobj_list[-1])
+    print(baseline_nmeas_total)
+    print(baseline_nmeas_priority)
+    
+    print('cat maint')
+    print(cat_maint_nobj_list[-1])
+    print(cat_maint_nmeas_total)
+    print(cat_maint_nmeas_priority, cat_maint_nmeas_priority/cat_maint_nmeas_total*100)
+    
+    print('tif = 0.1')
+    print(priority1_nobj_list[-1])
+    print(priority1_nmeas_total)
+    print(priority1_nmeas_priority, priority1_nmeas_priority/priority1_nmeas_total*100)
+    
+    print('tif = 0.01')
+    print(priority2_nobj_list[-1])
+    print(priority2_nmeas_total)
+    print(priority2_nmeas_priority, priority2_nmeas_priority/priority2_nmeas_total*100)
+    
+    
+    
+    plt.figure()
+    plt.plot(cat_maint_t0_hrs, cat_maint_nobj_list, 'r', label=r'$\tau_\text{non}=1.0$')
+    plt.plot(priority1_t0_hrs, priority1_nobj_list, 'b', label=r'$\tau_\text{non}=0.1$')
+    plt.plot(priority2_t0_hrs, priority2_nobj_list, 'g', label=r'$\tau_\text{non}=0.01$')
+    
+    # plt.xlim([-10, 180])
+    plt.xlabel('Time [hours]')
+    plt.ylabel('Number of Objects Detected')
+    plt.legend(loc='lower right')
+    
+    
+    plt.figure()
+    plt.plot(cat_maint_ta_hrs, cat_maint_all_count_list, 'r', label=r'$\tau_\text{non}=1.0$')
+    plt.plot(cat_maint_tp_hrs, cat_maint_priority_count_list, 'r--')
+    plt.plot(priority1_ta_hrs, priority1_all_count_list, 'b', label=r'$\tau_\text{non}=0.1$')
+    plt.plot(priority1_tp_hrs, priority1_priority_count_list, 'b--')
+    plt.plot(priority2_ta_hrs, priority2_all_count_list, 'g', label=r'$\tau_\text{non}=0.01$')
+    plt.plot(priority2_tp_hrs, priority2_priority_count_list, 'g--')
+    
+    # plt.xlim([-10, 180])
+    plt.xlabel('Time [hours]')
+    plt.ylabel('Number of Measurements')
+    plt.legend()
+    
+    
+    
+    plt.show()
+    
+    
+    return
+
+
+def process_meas_file(meas_file, t0_all, TCA_dict):
+    
+    # Load meas data
+    pklFile = open(meas_file, 'rb')
+    data = pickle.load( pklFile )
+    meas_dict = data[0]
+    pklFile.close()
+    
+    nmeas_total = 0.
+    nmeas_priority = 0.
+    t0_list = []
+    tk_priority = []
+    tk_all = []
+    for obj_id in meas_dict:
+        tk_list = meas_dict[obj_id]['tk_list']
+        
+        nmeas_total += len(tk_list)
+        t0_list.append(tk_list[0])
+        tk_all.extend(tk_list)
+        
+        if obj_id in TCA_dict:
+            count = bisect.bisect_right(tk_list, TCA_dict[obj_id])
+            tk_priority.extend(tk_list[0:count])
+            # print(obj_id)
+            # print(count)
+            # print(tk_priority)
+            # mistake
+            nmeas_priority += count
+            
+            
+            
+    t0_unique = sorted(list(set(t0_list)))
+    t0_hrs = [(ti - t0_all)/3600. for ti in t0_unique]
+    nobj = 0
+    nobj_list = []
+    for ti in t0_unique:
+        
+        count = t0_list.count(ti)
+        nobj += count
+        nobj_list.append(nobj)
+        
+    # print(len(tk_priority))
+    # print(set(tk_priority))
+    tpriority_unique = sorted(list(set(tk_priority)))
+    tp_hrs = [(tp - t0_all)/3600. for tp in tpriority_unique]
+    priority_count = 0
+    priority_count_list = []
+    for tp in tpriority_unique:
+        
+        count = tk_priority.count(tp)
+        priority_count += count
+        priority_count_list.append(priority_count)
+        
+    tk_all_unique = sorted(list(set(tk_all)))
+    ta_hrs = [(ta - t0_all)/3600. for ta in tk_all_unique]
+    all_count = 0
+    all_count_list = []
+    for ta in tk_all_unique:
+        
+        count = tk_all.count(ta)
+        all_count += count
+        all_count_list.append(all_count)
+        
+    
+    
+    return t0_hrs, nobj_list, tp_hrs, priority_count_list, ta_hrs, all_count_list, nmeas_total, nmeas_priority
 
 
 def analyze_bad_object(meas_file, truth_file, estimated_rso_file, 
@@ -805,9 +977,9 @@ if __name__ == '__main__':
     
     plt.close('all')
     
-    cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
-    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    plot_cdm_data(cdm_file, rso_file)
+    # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    # plot_cdm_data(cdm_file, rso_file)
     
     # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
     # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
@@ -821,3 +993,13 @@ if __name__ == '__main__':
     
 
 
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    baseline_meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
+    cat_maint_meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
+    priority_meas_file1 = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_full.pkl')
+    priority_meas_file2 = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
+
+
+
+    plot_meas_data(rso_file, baseline_meas_file, cat_maint_meas_file, 
+                       priority_meas_file1, priority_meas_file2)

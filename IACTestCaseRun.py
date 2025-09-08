@@ -1237,14 +1237,14 @@ if __name__ == '__main__':
     # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
     # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_secondaries.pkl')
-    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
+    # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
+    # output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_secondaries.pkl')
+    # priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
     
     
-    # meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
-    # output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_secondaries.pkl')
-    # catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
+    output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
+    catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -1258,7 +1258,7 @@ if __name__ == '__main__':
     
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
-    # obj_id_list = [91005, 95001, 95002, 97006]
+    # catalog_maint_bad_list = [90003, 91005, 92004, 95001]
     # obj_id_list = [93000]
     # obj_id_list = []
     # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
@@ -1277,9 +1277,9 @@ if __name__ == '__main__':
     
     # process_baseline_batch_output(output_file, truth_file)
     
-    process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
+    # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
-    # generate_case_summary(meas_file, output_file, truth_file)
+    generate_case_summary(meas_file, output_file, truth_file)
     
     
     # plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file, priority_cdm_file, truth_file)
