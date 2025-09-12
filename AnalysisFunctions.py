@@ -754,9 +754,9 @@ def plot_meas_data(rso_file, baseline_meas_file, cat_maint_meas_file,
     
     
     plt.figure()
-    plt.plot(cat_maint_t0_hrs, cat_maint_nobj_list, 'r', label=r'$\tau_\text{non}=1.0$')
-    plt.plot(priority1_t0_hrs, priority1_nobj_list, 'b', label=r'$\tau_\text{non}=0.1$')
-    plt.plot(priority2_t0_hrs, priority2_nobj_list, 'g', label=r'$\tau_\text{non}=0.01$')
+    plt.plot(cat_maint_t0_hrs, cat_maint_nobj_list, 'r', label=r'$\tau_\text{min}=1.0$')
+    plt.plot(priority1_t0_hrs, priority1_nobj_list, 'b', label=r'$\tau_\text{min}=0.1$')
+    plt.plot(priority2_t0_hrs, priority2_nobj_list, 'g', label=r'$\tau_\text{min}=0.01$')
     
     # plt.xlim([-10, 180])
     plt.xlabel('Time [hours]')
@@ -765,11 +765,11 @@ def plot_meas_data(rso_file, baseline_meas_file, cat_maint_meas_file,
     
     
     plt.figure()
-    plt.plot(cat_maint_ta_hrs, cat_maint_all_count_list, 'r', label=r'$\tau_\text{non}=1.0$')
+    plt.plot(cat_maint_ta_hrs, cat_maint_all_count_list, 'r', label=r'$\tau_\text{min}=1.0$')
     plt.plot(cat_maint_tp_hrs, cat_maint_priority_count_list, 'r--')
-    plt.plot(priority1_ta_hrs, priority1_all_count_list, 'b', label=r'$\tau_\text{non}=0.1$')
+    plt.plot(priority1_ta_hrs, priority1_all_count_list, 'b', label=r'$\tau_\text{min}=0.1$')
     plt.plot(priority1_tp_hrs, priority1_priority_count_list, 'b--')
-    plt.plot(priority2_ta_hrs, priority2_all_count_list, 'g', label=r'$\tau_\text{non}=0.01$')
+    plt.plot(priority2_ta_hrs, priority2_all_count_list, 'g', label=r'$\tau_\text{min}=0.01$')
     plt.plot(priority2_tp_hrs, priority2_priority_count_list, 'g--')
     
     # plt.xlim([-10, 180])
@@ -977,9 +977,9 @@ if __name__ == '__main__':
     
     plt.close('all')
     
-    # cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
-    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
-    # plot_cdm_data(cdm_file, rso_file)
+    cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    plot_cdm_data(cdm_file, rso_file)
     
     # meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01.pkl')
     # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
@@ -1001,5 +1001,5 @@ if __name__ == '__main__':
 
 
 
-    plot_meas_data(rso_file, baseline_meas_file, cat_maint_meas_file, 
-                       priority_meas_file1, priority_meas_file2)
+    # plot_meas_data(rso_file, baseline_meas_file, cat_maint_meas_file, 
+    #                    priority_meas_file1, priority_meas_file2)

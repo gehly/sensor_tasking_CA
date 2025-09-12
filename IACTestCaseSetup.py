@@ -837,7 +837,7 @@ def define_sensors(sensor_file):
     # Beamwidth from Abouzahra and Avent (1994) Table 1
     latitude_rad = np.radians(9.39)
     longitude_rad = np.radians(167.48)
-    height_m = np.radians(62.7)
+    height_m = 62.7
     beamwidth_rad = np.radians(1.1)  # 1.1 deg (UHF) or 2.8 deg (VHF)
     
     # Constraints/Limits
@@ -1306,10 +1306,18 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days):
             
             
             # plot all together using different rows for each object and square markers
-            plt.plot(thrs, [yval]*len(tk_list), 's', color=colors[yval-1])
+            plt.plot(thrs, [yval]*len(tk_list), 's', color='0.7') #color=colors[yval-1])
             
             yval += 1
         
+        
+        for ii in range(24):
+            ax.fill_betweenx([-1, 20], [ii, ii], [ii+1/6, ii+1/6], color='g', alpha=0.2)
+        
+        
+        ax.set_ylim([0, yval])
+        ax.set_xlim([0, 24])
+        ax.set_xticks([0, 3, 6, 9, 12, 15, 18, 21, 24])
         ax.set_yticks(range(1,len(obj_id_list)+1), labels=[str(obj_id) for obj_id in obj_id_list])
         ax.set_xlabel('Time [hours]')
         ax.set_ylabel('Object ID')
@@ -1317,29 +1325,35 @@ def compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days):
         
             
         
-    # # Compute number of objects visible at each time
-    # tvec = list(np.arange(t0, t0+tf_days*86400.+1., 10.))
-    # thrs = [(tk-t0)/3600. for tk in tvec]
-    # # colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(visibility_dict)+1))
-    # colors = ['r', 'b', 'g', 'k']
-    # cind = 0
-    # plt.figure()
-    # for sensor_id in visibility_dict:
+    # Compute number of objects visible at each time
+    tvec = list(np.arange(t0, t0+7*86400.+1., 10.))
+    thrs = [(tk-t0)/3600. for tk in tvec]
+    # colors = plt.cm.nipy_spectral(np.linspace(0, 1, len(visibility_dict)+1))
+    colors = ['r', 'b', 'g', 'k']
+    cind = 0
+    plt.figure()
+    for sensor_id in visibility_dict:
         
-    #     nvis_object = np.zeros(len(tvec),)
-    #     for obj_id in visibility_dict[sensor_id]:
-    #         tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
+        nvis_object = np.zeros(len(tvec),)
+        for obj_id in visibility_dict[sensor_id]:
+            tk_list = visibility_dict[sensor_id][obj_id]['tk_list']
             
-    #         ind_list = [tvec.index(tk) for tk in tk_list]
-    #         nvis_object[ind_list] += 1
+            # Reduce tk_list
+            reduced_tk = []
+            for tk in tk_list:
+                if math.fmod((tk-t0), 3600.)/3600. <= 1./6.:
+                    reduced_tk.append(tk)
+            
+            ind_list = [tvec.index(tk) for tk in reduced_tk]
+            nvis_object[ind_list] += 1
         
-    #     plt.plot(thrs, nvis_object, '.', color=colors[cind], label=sensor_id)
-    #     cind += 1
+        plt.plot(thrs, nvis_object, '.', color=colors[cind], label=sensor_id)
+        cind += 1
                 
             
-    # plt.xlabel('Time [hours]')    
-    # plt.ylabel('Number of Visible Objects')
-    # plt.legend()
+    plt.xlabel('Time [hours]')    
+    plt.ylabel('Number of Visible Objects')
+    plt.legend()
             
     plt.show()
     
@@ -1734,10 +1748,10 @@ if __name__ == '__main__':
 
     # verify_numerical_error()
     
-    # rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
+    rso_file = os.path.join('data', 'rso_catalog_truth.pkl')
     # estimated_rso_file = os.path.join('data', 'estimated_rso_catalog_batchPo.pkl')
     # sensor_file = os.path.join('data', 'sensor_data_rgazel.pkl')
-    # visibility_file = os.path.join('data', 'visibility_data.pkl')
+    visibility_file = os.path.join('data', 'visibility_data.pkl')
     # metrics_file = os.path.join('data', 'risk_metrics_truth_v3.csv')
     
     
@@ -1758,10 +1772,10 @@ if __name__ == '__main__':
     
     # generate_visibility_dict(truth_file, sensor_file, visibility_file)
 
-    # tf_days = 1.
-    # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
-    #                97000, 98000, 99000]
-    # compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
+    tf_days = 1.
+    obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000,
+                   97000, 98000, 99000]
+    compute_visibility_stats(rso_file, visibility_file, obj_id_list, tf_days)
 
 
     # create_estimated_catalog(rso_file, estimated_rso_file)
@@ -1773,7 +1787,7 @@ if __name__ == '__main__':
     # plot_true_miss_distances(metrics_file)
 
 
-    test_remediate_covar()
+    # test_remediate_covar()
 
 
 

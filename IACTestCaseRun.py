@@ -1062,27 +1062,81 @@ def generate_case_summary(meas_file, output_file, truth_file, bad_list=[]):
     return
 
 
-def plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, priority_cdm_file, truth_file):
+def risk_metric_plot_dict(cdm_dict, t0):
+    
+    plot_data = {}
+    for cdm_id in cdm_dict:
+        
+        CDM_epoch = cdm_dict[cdm_id]['CDM_epoch']
+        secondary_id = cdm_dict[cdm_id]['secondary_id']
+        miss_distance = cdm_dict[cdm_id]['miss_distance']
+        Pc = cdm_dict[cdm_id]['Pc2D_Foster']
+        Uc = cdm_dict[cdm_id]['Uc2D']
+        
+        thrs = (CDM_epoch - t0)/3600.
+        
+        if secondary_id not in plot_data:
+            plot_data[secondary_id] = {}
+            plot_data[secondary_id]['thrs'] = []
+            plot_data[secondary_id]['miss_distance'] = []
+            plot_data[secondary_id]['Pc'] = []
+            plot_data[secondary_id]['Uc'] = []
+            
+        plot_data[secondary_id]['thrs'].append(thrs)
+        plot_data[secondary_id]['miss_distance'].append(miss_distance)
+        plot_data[secondary_id]['Pc'].append(Pc)
+        plot_data[secondary_id]['Uc'].append(Uc)
+    
+    
+    return plot_data
+
+
+def plot_risk_metrics(baseline_cdm_file, cat_maint_cdm_file, priority1_cdm_file,
+                      priority2_cdm_file, cat_maint_meas_file, priority1_meas_file,
+                      priority2_meas_file, truth_file):
     
     pklFile = open(baseline_cdm_file, 'rb')
     data = pickle.load( pklFile )
     baseline_cdm_dict = data[0]
     pklFile.close()
     
-    pklFile = open(greedy_cdm_file, 'rb')
+    pklFile = open(cat_maint_cdm_file, 'rb')
     data = pickle.load( pklFile )
-    greedy_cdm_dict = data[0]
+    cat_maint_cdm_dict = data[0]
     pklFile.close()
     
-    pklFile = open(priority_cdm_file, 'rb')
+    pklFile = open(priority1_cdm_file, 'rb')
     data = pickle.load( pklFile )
-    priority_cdm_dict = data[0]
+    priority1_cdm_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(priority2_cdm_file, 'rb')
+    data = pickle.load( pklFile )
+    priority2_cdm_dict = data[0]
     pklFile.close()
     
     pklFile = open(truth_file, 'rb')
     data = pickle.load( pklFile )
     truth_dict = data[0]
     pklFile.close()
+    
+    pklFile = open(cat_maint_meas_file, 'rb')
+    data = pickle.load( pklFile )
+    cat_maint_meas_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(priority1_meas_file, 'rb')
+    data = pickle.load( pklFile )
+    priority1_meas_dict = data[0]
+    pklFile.close()
+    
+    pklFile = open(priority2_meas_file, 'rb')
+    data = pickle.load( pklFile )
+    priority2_meas_dict = data[0]
+    pklFile.close()
+    
+    
+    
     
     # Set t0 for all objects
     primary_id = 52373
@@ -1101,111 +1155,59 @@ def plot_risk_metrics(baseline_cdm_file, greedy_cdm_file, priority_cdm_file, tru
     TCA_dict[98000] = t0 + 145.*3600.
     TCA_dict[99000] = t0 + 162.*3600.
     
-    baseline_plot_data = {}
-    for cdm_id in baseline_cdm_dict:
-        
-        CDM_epoch = baseline_cdm_dict[cdm_id]['CDM_epoch']
-        secondary_id = baseline_cdm_dict[cdm_id]['secondary_id']
-        miss_distance = baseline_cdm_dict[cdm_id]['miss_distance']
-        Pc = baseline_cdm_dict[cdm_id]['Pc2D_Foster']
-        Uc = baseline_cdm_dict[cdm_id]['Uc2D']
-        
-        thrs = (CDM_epoch - t0)/3600.
-        
-        if secondary_id not in baseline_plot_data:
-            baseline_plot_data[secondary_id] = {}
-            baseline_plot_data[secondary_id]['thrs'] = []
-            baseline_plot_data[secondary_id]['miss_distance'] = []
-            baseline_plot_data[secondary_id]['Pc'] = []
-            baseline_plot_data[secondary_id]['Uc'] = []
-            
-        baseline_plot_data[secondary_id]['thrs'].append(thrs)
-        baseline_plot_data[secondary_id]['miss_distance'].append(miss_distance)
-        baseline_plot_data[secondary_id]['Pc'].append(Pc)
-        baseline_plot_data[secondary_id]['Uc'].append(Uc)
-        
+    baseline_plot_data = risk_metric_plot_dict(baseline_cdm_dict, t0)
+    cat_maint_plot_data = risk_metric_plot_dict(cat_maint_cdm_dict, t0)
+    priority1_plot_data = risk_metric_plot_dict(priority1_cdm_dict, t0)
+    priority2_plot_data = risk_metric_plot_dict(priority2_cdm_dict, t0)    
     
-    greedy_plot_data = {}
-    for cdm_id in greedy_cdm_dict:
-        
-        CDM_epoch = greedy_cdm_dict[cdm_id]['CDM_epoch']
-        secondary_id = greedy_cdm_dict[cdm_id]['secondary_id']
-        miss_distance = greedy_cdm_dict[cdm_id]['miss_distance']
-        Pc = greedy_cdm_dict[cdm_id]['Pc2D_Foster']
-        Uc = greedy_cdm_dict[cdm_id]['Uc2D']
-        
-        if CDM_epoch > (TCA_dict[secondary_id] - 3600.):
-            continue
-        
-        thrs = (CDM_epoch - t0)/3600.
-        
-        if secondary_id not in greedy_plot_data:
-            greedy_plot_data[secondary_id] = {}
-            greedy_plot_data[secondary_id]['thrs'] = []
-            greedy_plot_data[secondary_id]['miss_distance'] = []
-            greedy_plot_data[secondary_id]['Pc'] = []
-            greedy_plot_data[secondary_id]['Uc'] = []
-            
-        greedy_plot_data[secondary_id]['thrs'].append(thrs)
-        greedy_plot_data[secondary_id]['miss_distance'].append(miss_distance)
-        greedy_plot_data[secondary_id]['Pc'].append(Pc)
-        greedy_plot_data[secondary_id]['Uc'].append(Uc)  
-        
-        
-    priority_plot_data = {}
-    for cdm_id in priority_cdm_dict:
-        
-        CDM_epoch = priority_cdm_dict[cdm_id]['CDM_epoch']
-        secondary_id = priority_cdm_dict[cdm_id]['secondary_id']
-        miss_distance = priority_cdm_dict[cdm_id]['miss_distance']
-        Pc = priority_cdm_dict[cdm_id]['Pc2D_Foster']
-        Uc = priority_cdm_dict[cdm_id]['Uc2D']
-        
-        if CDM_epoch > (TCA_dict[secondary_id] - 3600.):
-            continue
-        
-        thrs = (CDM_epoch - t0)/3600.
-        
-        if secondary_id not in priority_plot_data:
-            priority_plot_data[secondary_id] = {}
-            priority_plot_data[secondary_id]['thrs'] = []
-            priority_plot_data[secondary_id]['miss_distance'] = []
-            priority_plot_data[secondary_id]['Pc'] = []
-            priority_plot_data[secondary_id]['Uc'] = []
-            
-        priority_plot_data[secondary_id]['thrs'].append(thrs)
-        priority_plot_data[secondary_id]['miss_distance'].append(miss_distance)
-        priority_plot_data[secondary_id]['Pc'].append(Pc)
-        priority_plot_data[secondary_id]['Uc'].append(Uc)  
     
     
     for obj_id in baseline_plot_data:
         
-        plt.figure()
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharex=True)
         
-        plt.subplot(3,1,1)
-        plt.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['miss_distance'], 'ko-', label='Baseline')
-        plt.semilogy(priority_plot_data[obj_id]['thrs'], priority_plot_data[obj_id]['miss_distance'], 'bo-', label='Priority')
-        plt.semilogy(greedy_plot_data[obj_id]['thrs'], greedy_plot_data[obj_id]['miss_distance'], 'ro-', label='Maintenance')
-        plt.ylabel('Miss Dist [m]')
-        plt.title('Object ' + str(obj_id))
-        plt.ylim([0.1, 20000])
-        plt.legend()
+        ax1.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['miss_distance'], 'ko-', label='Baseline')
+        ax1.semilogy(cat_maint_plot_data[obj_id]['thrs'], cat_maint_plot_data[obj_id]['miss_distance'], 'ro-', label=r'$\tau_{\text{min}}=1.0$')
+        ax1.semilogy(priority1_plot_data[obj_id]['thrs'], priority1_plot_data[obj_id]['miss_distance'], 'bo-', label=r'$\tau_{\text{min}}=0.1$')
+        ax1.semilogy(priority2_plot_data[obj_id]['thrs'], priority2_plot_data[obj_id]['miss_distance'], 'go-', label=r'$\tau_{\text{min}}=0.01$')
+        ax1.set_ylabel('Miss Dist [m]')
+        ax1.set_title('Object ' + str(obj_id))
+        ax1.set_ylim([0.1, 20000])
+        ax1.legend()
         
-        plt.subplot(3,1,2)
-        plt.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['Pc'], 'ko-')
-        plt.semilogy(priority_plot_data[obj_id]['thrs'], priority_plot_data[obj_id]['Pc'], 'bo-')
-        plt.semilogy(greedy_plot_data[obj_id]['thrs'], greedy_plot_data[obj_id]['Pc'], 'ro-')
-        plt.ylabel('Pc')
-        plt.ylim([1e-10, 2])
+        ax2.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['Pc'], 'ko-')
+        ax2.semilogy(cat_maint_plot_data[obj_id]['thrs'], cat_maint_plot_data[obj_id]['Pc'], 'ro-')
+        ax2.semilogy(priority1_plot_data[obj_id]['thrs'], priority1_plot_data[obj_id]['Pc'], 'bo-')
+        ax2.semilogy(priority2_plot_data[obj_id]['thrs'], priority2_plot_data[obj_id]['Pc'], 'go-')
+        ax2.fill_between([-100, 200], [1e-12, 1e-12], [1e-7, 1e-7], color='g', alpha=0.2)
+        ax2.fill_between([-100, 200], [1e-7, 1e-7], [1e-4, 1e-4], color='y', alpha=0.2)
+        ax2.fill_between([-100, 200], [1e-4, 1e-4], [1, 1], color='r', alpha=0.2)
+        ax2.set_ylabel('Pc')
+        ax2.set_ylim([1e-10, 2])
+        ax2.set_yticks([1e-10, 1e-7, 1e-4, 0.1])
         
-        plt.subplot(3,1,3)
-        plt.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['Uc'], 'ko-')
-        plt.semilogy(priority_plot_data[obj_id]['thrs'], priority_plot_data[obj_id]['Uc'], 'bo-')
-        plt.semilogy(greedy_plot_data[obj_id]['thrs'], greedy_plot_data[obj_id]['Uc'], 'ro-')
-        plt.ylabel('Uc')
-        plt.xlabel('Time [hours]')
-        plt.ylim([1e-10, 2])
+        ax3.semilogy(baseline_plot_data[obj_id]['thrs'], baseline_plot_data[obj_id]['Uc'], 'ko-')
+        ax3.semilogy(cat_maint_plot_data[obj_id]['thrs'], cat_maint_plot_data[obj_id]['Uc'], 'ro-')
+        ax3.semilogy(priority1_plot_data[obj_id]['thrs'], priority1_plot_data[obj_id]['Uc'], 'bo-')
+        ax3.semilogy(priority2_plot_data[obj_id]['thrs'], priority2_plot_data[obj_id]['Uc'], 'go-')
+        ax3.fill_between([-100, 200], [1e-12, 1e-12], [1e-7, 1e-7], color='g', alpha=0.2)
+        ax3.fill_between([-100, 200], [1e-7, 1e-7], [1e-4, 1e-4], color='y', alpha=0.2)
+        ax3.fill_between([-100, 200], [1e-4, 1e-4], [1, 1], color='r', alpha=0.2)
+        ax3.set_ylabel('Uc')
+        ax3.set_xlabel('Time [hours]')
+        ax3.set_ylim([1e-10, 2])
+        ax3.set_yticks([1e-10, 1e-7, 1e-4, 0.1])
+        
+        cat_maint_meas_thrs = [(tk-t0)/3600. for tk in cat_maint_meas_dict[obj_id]['tk_list']]
+        cat_maint_meas_tif = cat_maint_meas_dict[obj_id]['tif_list']
+        priority1_meas_thrs = [(tk-t0)/3600. for tk in priority1_meas_dict[obj_id]['tk_list']]
+        priority1_meas_tif = priority1_meas_dict[obj_id]['tif_list']
+        priority2_meas_thrs = [(tk-t0)/3600. for tk in priority2_meas_dict[obj_id]['tk_list']]
+        priority2_meas_tif = priority2_meas_dict[obj_id]['tif_list']
+        
+        ax4.plot(cat_maint_meas_thrs, cat_maint_meas_tif, 'ro-')
+        ax4.plot(priority1_meas_thrs, priority1_meas_tif, 'bo-')
+        ax4.plot(priority2_meas_thrs, priority2_meas_tif, 'go-')
         
         
     
@@ -1235,7 +1237,7 @@ if __name__ == '__main__':
     
     # meas_file = os.path.join('data', 'baseline_measurement_data_rgazel.pkl')
     # output_file = os.path.join('data', 'baseline_output_batchPo_rgazel.pkl')
-    # baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
+    baseline_cdm_file = os.path.join('data', 'baseline_cdm_batchPo_rgazel.pkl')
     
     
     # meas_file = os.path.join('data', 'greedy_renyi_measurement_data_rgazel.pkl')
@@ -1247,18 +1249,18 @@ if __name__ == '__main__':
     # greedy_cdm_file = os.path.join('data', 'greedy_renyi_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
-    # meas_file = os.path.join('data', 'priority_basic_measurement_data_rgazel_10sec_limitvis_multistep.pkl')
-    # output_file = os.path.join('data', 'priority_basic_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
-    # priority_cdm_file = os.path.join('data', 'priority_basic_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    priority1_meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif01_full.pkl')
+    priority1_output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_all_Q0.pkl')
+    priority1_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif01_Q0.pkl')
     
-    meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
-    output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_all.pkl')
-    priority_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
+    priority2_meas_file = os.path.join('data', 'priority_risk_measurement_data_rgazel_10sec_limitvis_multistep_tif001_full.pkl')
+    priority2_output_file = os.path.join('data', 'priority_risk_output_batchPo_rgazel_10sec_limitvis_multistep_tif001_all.pkl')
+    priority2_cdm_file = os.path.join('data', 'priority_risk_cdm_batchPo_rgazel_10sec_limitvis_multistep_tif001.pkl')
     
     
-    # meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
-    # output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
-    # catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
+    catalog_maint_meas_file = os.path.join('data', 'catalog_maint_measurement_data_rgazel_10sec_limitvis_multistep_full.pkl')
+    catalog_maint_output_file = os.path.join('data', 'catalog_maint_output_batchPo_rgazel_10sec_limitvis_multistep_all.pkl')
+    catalog_maint_cdm_file = os.path.join('data', 'catalog_maint_cdm_batchPo_rgazel_10sec_limitvis_multistep.pkl')
     
     
     # generate_baseline_measurements(rso_file, sensor_file, visibility_file,
@@ -1273,7 +1275,7 @@ if __name__ == '__main__':
     
     # obj_id_list = [52373, 90000, 91000, 92000, 93000, 94000, 95000, 96000, 97000, 98000, 99000]
     # catalog_maint_bad_list = [90003, 91005, 92004, 95001]  #,
-    tif001_bad_list = [90003, 91009, 91010, 94001, 94009, 95001, 98001, 98002]
+    # tif001_bad_list = [90003, 91009, 91010, 94001, 94009, 95001, 98001, 98002]
     # obj_id_list = [93000]
     # obj_id_list = []
     # filter_process_measurements(estimated_rso_file, sensor_file, meas_file,
@@ -1294,10 +1296,13 @@ if __name__ == '__main__':
     
     # process_cdm_output(estimated_rso_file, output_file, priority_cdm_file)
 
-    generate_case_summary(meas_file, output_file, truth_file, tif001_bad_list)
+    # generate_case_summary(meas_file, output_file, truth_file, [])
     
     
-    # plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file, priority_cdm_file, truth_file)
+    plot_risk_metrics(baseline_cdm_file, catalog_maint_cdm_file,
+                      priority1_cdm_file, priority2_cdm_file, 
+                      catalog_maint_meas_file, priority1_meas_file, 
+                      priority2_meas_file, truth_file)
 
 
 
